@@ -11,7 +11,7 @@ const S = {
   plans: [],
   workouts: [],             // neueste zuerst
   day: null,                 // aktuell gewählte planId
-  draft: {},                 // { [planId]: { [exerciseId]: {weight, done, suggested} } }
+  draft: {},                 // { [planId]: { [exerciseId]: {weight, done} } }
   openKey: null,             // "planId|exerciseId" der aufgeklappten Historie
   editPlan: null,
 };
@@ -26,6 +26,8 @@ const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) =>
 const todayISO = () => { const d = new Date(); d.setMinutes(d.getMinutes() - d.getTimezoneOffset()); return d.toISOString().slice(0, 10); };
 const tsOf = (iso) => new Date(iso + 'T12:00:00').getTime();
 const fmtShort = (iso) => new Date(iso + 'T12:00:00').toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: '2-digit' });
+const fmtDate = (iso) => new Date(iso + 'T12:00:00').toLocaleDateString('de-DE', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' });
+const fmtFullDate = (iso) => new Date(iso + 'T12:00:00').toLocaleDateString('de-DE', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' });
 const fmtKg = (v) => (Math.round(v * 100) / 100).toLocaleString('de-DE');
 
 const UNITS = { kg: 'kg', s: 'Sek.', x: '' };
@@ -154,14 +156,6 @@ function saveDraft() {
 }
 
 /* ---------------- Auswertung ---------------- */
-/* Wurde diese Übung heute bewusst bewertet (nicht nur die Vorgabe stehen gelassen)? */
-function touched(e) {
-  if (e.done) return true;
-  const w = String(e.weight == null ? '' : e.weight).trim();
-  const sug = String(e.suggested == null ? '' : e.suggested).trim();
-  return w !== '' && w !== sug;
-}
-
 function entryIn(w, exId) { return (w.entries || []).find((e) => e.exerciseId === exId) || null; }
 
 /* Letztes Protokoll dieser Übung in diesem Plan (planId + exerciseId, nie nur die Übung). */
@@ -192,8 +186,8 @@ function seriesFor(exId, planId) {
 }
 
 /* ---------------- Router ---------------- */
-const TITLES = { main: 'Training', planEdit: 'Plan bearbeiten' };
-const BACKABLE = { planEdit: 'main' };
+const TITLES = { main: 'Training', planEdit: 'Plan bearbeiten', history: 'Verlauf' };
+const BACKABLE = { planEdit: 'main', history: 'main' };
 
 function nav(view) { S.view = view; window.scrollTo(0, 0); render(); }
 
@@ -202,7 +196,7 @@ function render() {
   $('#title').textContent = TITLES[v] || 'Training';
   $('#backBtn').classList.toggle('hidden', !BACKABLE[v]);
   $('#savebar').classList.toggle('hidden', v !== 'main' || !S.plans.length);
-  $('#app').innerHTML = v === 'planEdit' ? viewPlanEdit() : viewMain();
+  $('#app').innerHTML = v === 'planEdit' ? viewPlanEdit() : v === 'history' ? viewHistory() : viewMain();
 }
 
 /* ---------------- Hauptseite ---------------- */
@@ -215,6 +209,14 @@ function viewMain() {
   let h = '<div class="daybar">' + S.plans.map((p) =>
     '<button class="dayseg' + (p.id === S.day ? ' on' : '') + '" data-action="day" data-id="' + p.id + '">' +
     esc(p.name) + '</button>').join('') + '</div>';
+
+  const today = todayISO();
+  const todaysW = S.workouts.find((w) => w.planId === plan.id && w.date === today);
+  const lastOther = S.workouts.find((w) => w.planId === plan.id && w.date !== today);
+  let meta = fmtFullDate(today);
+  meta += todaysW ? ' · heute bereits gespeichert (erneutes Speichern überschreibt)'
+    : lastOther ? ' · zuletzt ' + fmtShort(lastOther.date) : ' · noch nie trainiert';
+  h += '<div class="daymeta">' + esc(meta) + '</div>';
 
   h += '<div class="card" style="padding:6px 10px 10px"><table class="ptab">' +
     '<tr><th>Block</th><th>Übung</th><th class="num">Sätze × Wdh.</th></tr>';
@@ -232,7 +234,7 @@ function ensureDraft(planId) {
     if (unitOf(it.exerciseId) === 'x') return;
     const prev = lastLog(it.exerciseId, planId);
     const w = prev && prev.weight > 0 ? fmtKg(prev.weight) : '';
-    d[it.exerciseId] = { weight: w, done: false, suggested: w };
+    d[it.exerciseId] = { weight: w, done: false };
   });
   S.draft[planId] = d;
 }
@@ -241,10 +243,12 @@ function planRow(plan, it) {
   const exId = it.exerciseId;
   const unit = unitOf(exId);
   const tracked = unit !== 'x';
+  const isOpen = tracked && S.openKey === plan.id + '|' + exId;
 
   let h = '<tr class="ex-row"' + (tracked ? ' data-action="toggle-hist" data-id="' + exId + '"' : '') + '>' +
     '<td class="blk-c">' + esc(it.block || '') + '</td>' +
-    '<td><div>' + esc(exName(exId)) + '</div>' +
+    '<td><div class="exname">' + esc(exName(exId)) +
+    (tracked ? '<span class="chev-ico' + (isOpen ? ' on' : '') + '">›</span>' : '') + '</div>' +
     (it.hint ? '<div class="hint">' + esc(it.hint) + '</div>' : '') + '</td>' +
     '<td class="num nowrap">' + esc((it.targetSets || '?') + ' × ' + (it.targetReps || '?')) + '</td></tr>';
 
@@ -261,7 +265,7 @@ function planRow(plan, it) {
     '<label class="chk"><input type="checkbox" data-in="done" data-plan="' + plan.id + '" data-id="' + exId + '"' +
     (d.done ? ' checked' : '') + '><span>alles geschafft</span></label></div></td></tr>';
 
-  if (S.openKey === plan.id + '|' + exId) {
+  if (isOpen) {
     h += '<tr class="hist-row"><td colspan="3">' + historyBox(exId, plan.id, unit) + '</td></tr>';
   }
   return h;
@@ -282,6 +286,9 @@ function historyBox(exId, planId, unit) {
 }
 
 /* ---------------- Einheit speichern ---------------- */
+/* Speichert alle Übungen mit einem Gewicht (auch unverändert übernommene) oder
+   abgehaktem "geschafft". Ein zweites Speichern am selben Tag überschreibt den
+   heutigen Eintrag, statt einen zweiten anzulegen. */
 async function saveWorkout() {
   const plan = S.plans.find((p) => p.id === S.day);
   if (!plan) return;
@@ -292,30 +299,39 @@ async function saveWorkout() {
     const d = draft[it.exerciseId];
     if (!d) return;
     trackedCount++;
-    if (!touched(d)) return;
-    entries.push({ exerciseId: it.exerciseId, block: it.block || '', weight: num(d.weight), done: !!d.done });
+    const weight = num(d.weight);
+    if (!(weight > 0) && !d.done) return;
+    entries.push({ exerciseId: it.exerciseId, block: it.block || '', weight, done: !!d.done });
   });
-  if (!entries.length) { toast('Nichts protokolliert – erst Gewicht eintragen oder abhaken'); return; }
-  const skipped = trackedCount - entries.length;
+  if (!entries.length) { toast('Nichts einzutragen – erst ein Gewicht eintragen'); return; }
+  const missing = trackedCount - entries.length;
 
+  const date = todayISO();
+  const existing = S.workouts.find((w) => w.planId === plan.id && w.date === date);
   const w = {
-    id: uid(), date: todayISO(), startedAt: Date.now(), finishedAt: Date.now(),
+    id: existing ? existing.id : uid(),
+    date, startedAt: existing ? existing.startedAt : Date.now(), finishedAt: Date.now(),
     planId: plan.id, planName: plan.name, entries,
   };
   await DB.put('workouts', w);
-  S.workouts.unshift(w);
+  S.workouts = existing ? S.workouts.map((x) => (x.id === w.id ? w : x)) : [w, ...S.workouts];
   S.workouts.sort(byDateDesc);
   delete S.draft[plan.id];
   saveDraft();
   S.openKey = null;
   render();
-  toast('Einheit gespeichert' + (skipped ? ' · ' + skipped + ' Übung' + (skipped > 1 ? 'en' : '') + ' ohne Bewertung übersprungen' : ''), 3200);
+  toast((existing ? 'Heutige Einheit aktualisiert' : 'Einheit gespeichert') +
+    (missing ? ' · ' + missing + ' Übung' + (missing > 1 ? 'en' : '') + ' ohne Gewicht nicht gespeichert' : ''), 3200);
 }
 
 /* ---------------- Menü ---------------- */
 function openMenu() {
   const hasDemo = S.workouts.some((w) => w.demo);
   let h = '<div class="modal-h"><h2>Menü</h2><button class="icon-btn" data-action="modal-close">✕</button></div>';
+  h += '<div class="sec-title">Verlauf</div>' +
+    '<div class="item" data-action="history"><div class="grow"><strong>Alle Einheiten</strong>' +
+    '<span class="mut sm">' + S.workouts.length + (S.workouts.length === 1 ? ' Einheit gespeichert' : ' Einheiten gespeichert') +
+    '</span></div><span class="chev">›</span></div>';
   h += '<div class="sec-title">Pläne</div>';
   S.plans.forEach((p) => {
     h += '<div class="item" data-action="plan-edit" data-id="' + p.id + '">' +
@@ -339,6 +355,50 @@ async function demoDel() {
   await DB.put('meta', { key: 'draft', value: S.draft });
   closeModal(); render();
   toast('Demodaten gelöscht');
+}
+
+/* ---------------- Verlauf ---------------- */
+function viewHistory() {
+  if (!S.workouts.length) return '<div class="empty">Noch keine Trainings gespeichert.</div>';
+  let h = '', month = '';
+  S.workouts.forEach((w) => {
+    const m = new Date(w.date + 'T12:00:00').toLocaleDateString('de-DE', { month: 'long', year: 'numeric' });
+    if (m !== month) { month = m; h += '<div class="sec-title">' + esc(m) + '</div>'; }
+    const done = (w.entries || []).filter((e) => e.done).length;
+    h += '<div class="item" data-action="hist-open" data-id="' + w.id + '">' +
+      '<div class="grow"><strong class="ellip">' + esc(w.planName || 'Training') + (w.demo ? ' · Demo' : '') + '</strong>' +
+      '<span class="mut sm">' + fmtDate(w.date) + ' · ' + (w.entries || []).length + ' Übungen · ' + done + '× geschafft</span></div>' +
+      '<span class="chev">›</span></div>';
+  });
+  return h;
+}
+
+function openWorkoutDetail(id) {
+  const w = S.workouts.find((x) => x.id === id);
+  if (!w) return;
+  const done = (w.entries || []).filter((e) => e.done).length;
+  let h = '<div class="modal-h"><h2 class="ellip">' + esc(w.planName || 'Training') + '</h2>' +
+    '<button class="icon-btn" data-action="modal-close">✕</button></div>' +
+    '<div class="mut" style="margin-bottom:12px">' + fmtDate(w.date) + ' · ' + done + ' von ' + (w.entries || []).length + ' geschafft' +
+    (w.demo ? ' · Demo' : '') + '</div>' +
+    '<table class="ptab"><tr><th>Block</th><th>Übung</th><th class="num">Gewicht</th><th class="num"></th></tr>';
+  (w.entries || []).forEach((e) => {
+    const unit = unitOf(e.exerciseId);
+    h += '<tr><td class="blk-c">' + esc(e.block || '') + '</td><td>' + esc(exName(e.exerciseId)) + '</td>' +
+      '<td class="num nowrap">' + (e.weight > 0 ? fmtKg(e.weight) + ' ' + UNITS[unit] : '–') + '</td>' +
+      '<td class="num ' + (e.done ? 'ok' : 'no') + '">' + (e.done ? '✓' : '✗') + '</td></tr>';
+  });
+  h += '</table><div class="btn-row" style="margin-top:14px">' +
+    '<button class="btn ghost danger" data-action="hist-del" data-id="' + w.id + '">Löschen</button>' +
+    '<button class="btn primary" data-action="modal-close">Schließen</button></div>';
+  openModal(h);
+}
+
+async function deleteWorkout(id) {
+  if (!confirm('Diese Einheit endgültig löschen?')) return;
+  await DB.del('workouts', id);
+  S.workouts = S.workouts.filter((w) => w.id !== id);
+  closeModal(); render();
 }
 
 /* ---------------- Plan bearbeiten ---------------- */
@@ -515,6 +575,10 @@ function onClick(ev) {
     case 'day': S.day = id; S.openKey = null; render(); break;
     case 'toggle-hist': { const key = S.day + '|' + id; S.openKey = S.openKey === key ? null : key; render(); break; }
     case 'save-workout': saveWorkout(); break;
+
+    case 'history': closeModal(); nav('history'); break;
+    case 'hist-open': openWorkoutDetail(id); break;
+    case 'hist-del': deleteWorkout(id); break;
 
     case 'plan-edit': closeModal(); S.editPlan = JSON.parse(JSON.stringify(S.plans.find((p) => p.id === id))); nav('planEdit'); break;
     case 'plan-save': savePlan(); break;

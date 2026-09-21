@@ -1,8 +1,13 @@
 # Übergabe: Gym Log
 
-Stand: 21.09.2026, nach dem Rückbau auf eine Seite. `PROMPT.md` enthält den
-Auftrag dieser Session und ist erledigt — historisch interessant, keine offene
+Stand: 21.09.2026, nach dem Rückbau auf eine Seite plus einer Feedback-Runde aus dem
+echten Betrieb (Deployment auf GitHub Pages, Nutzung am Handy). `PROMPT.md` enthält den
+ursprünglichen Umbau-Auftrag und ist erledigt — historisch interessant, keine offene
 Aufgabe mehr.
+
+**Live:** https://aschowtjak.github.io/gym-log/ (Repo `aschowtjak/gym-log` auf GitHub,
+Branch `master`, GitHub Pages auf Root). Deploy = `git push`; nach zwei App-Starts ist
+eine Änderung aktiv (Service-Worker-Cache, siehe Abschnitt 6).
 
 ---
 
@@ -57,22 +62,34 @@ das einzige Bewertungsfeld ("alles geschafft?"); der ↑-Marker der nächsten Ei
 beim Rendern **abgeleitet** (`lastLog(...).done`), nie gespeichert.
 
 `meta.draft` hält die aktuell eingetragenen, noch nicht gespeicherten Werte pro Plan
-(`{ [planId]: { [exerciseId]: {weight, done, suggested} } }`), debounced persistiert,
-damit ein Reload mitten im Eintragen nichts verliert. `suggested` ist die Vorbelegung
-aus der letzten Einheit und wird nur für `touched()` gebraucht (siehe Abschnitt 5).
+(`{ [planId]: { [exerciseId]: {weight, done} } }`), debounced persistiert, damit ein
+Reload mitten im Eintragen nichts verliert.
+
+**Ein Workout pro `planId` + `date`.** `saveWorkout()` sucht vor dem Schreiben nach einem
+bestehenden Eintrag mit demselben Plan und demselben Kalendertag und überschreibt ihn
+(gleiche `id`, gleiche `startedAt`), statt einen zweiten anzulegen. Wer also abends
+nochmal öffnet und nachträgt, produziert keinen Karteileichen-Eintrag — Absicht,
+Nutzerwunsch aus der ersten Feedback-Runde.
 
 ---
 
 ## 3. Aufbau der Oberfläche (eine Seite, keine Tabs)
 
-`js/app.js` kennt genau zwei „Views": `main` (Tagesumschalter + Plan-/Gewichtstabelle)
-und `planEdit` (Plan bearbeiten, erreichbar nur über das Zahnrad-Menü). Kein Tabbar,
-kein separater Fortschritts- oder Verlaufs-Bildschirm mehr.
+`js/app.js` kennt drei „Views": `main` (Tagesumschalter + Plan-/Gewichtstabelle),
+`planEdit` (Plan bearbeiten) und `history` (Liste aller gespeicherten Einheiten) —
+letztere beide nur über das Zahnrad-Menü erreichbar. Kein Tabbar.
 
 - **Tagesumschalter** (`.daybar`) oben: ein Button pro Plan (`S.plans`), erwartet genau
   zwei Pläne (Tag A / Tag B). `S.day` hält die aktuell gewählte `planId`.
+- **Datums-/Kontextzeile** (`.daymeta`) direkt darunter: heutiges Datum ausgeschrieben
+  (`fmtFullDate`) plus, je nach Zustand, „heute bereits gespeichert (erneutes Speichern
+  überschreibt)", „zuletzt <Datum>" oder „noch nie trainiert". Zweck: sofort erkennbar,
+  dass eine neue, datierte Einheit begonnen wird, und was beim Speichern passiert.
 - **Plan-/Gewichtstabelle** (`<table class="ptab">`): pro Übung zwei bis drei `<tr>`:
-  1. die eigentliche Planzeile (Block, Übung + Hinweis, Sätze × Wdh.),
+  1. die eigentliche Planzeile (Block, Übung + Hinweis, Sätze × Wdh.) — bei Übungen mit
+     Gewicht trägt der Übungsname einen kleinen Chevron (`.chev-ico`, `›`), der beim
+     Aufklappen auf `.on` (blau, 90° gedreht) wechselt. Reine Sichtbarkeits-Korrektur:
+     die Historie gab es vorher schon, war aber nicht als tippbar erkennbar.
   2. bei Übungen mit Gewicht (`unit !== 'x'`) eine zweite Zeile über die volle Breite
      mit Gewichtsfeld, ↑-Marker und dem Haken „alles geschafft" (`.wctrl`),
   3. bei aufgeklappter Historie eine dritte Zeile mit Kurve (`Chart.line`) und Liste
@@ -81,23 +98,27 @@ kein separater Fortschritts- oder Verlaufs-Bildschirm mehr.
   dadurch bleiben die Tippflächen groß, ohne dass Klicks auf Eingabefeld/Haken versehentlich
   die Historie auf- oder zuklappen (das Toggle hängt nur an der ersten `<tr>`).
 - **Speichern-Leiste** (`#savebar`, fixiert unten) ersetzt die alte Tabbar/Restbar.
-- **Zahnrad-Menü** (Modal): Liste der Pläne → „Plan bearbeiten", dazu Backup
-  Export/Import, „Demodaten löschen" (nur sichtbar, wenn welche existieren) und
-  „Alle Daten löschen".
+- **Zahnrad-Menü** (Modal): „Verlauf" → alle Einheiten (`nav('history')`), dazu Liste
+  der Pläne → „Plan bearbeiten", Backup Export/Import, „Demodaten löschen" (nur sichtbar,
+  wenn welche existieren) und „Alle Daten löschen".
+- **Verlauf** (`viewHistory()`): alle Workouts, neueste zuerst, nach Monat gruppiert,
+  Demo-Einheiten mit „· Demo" markiert. Tippen öffnet `openWorkoutDetail()` als Modal
+  (Block/Übung/Gewicht/Status je Eintrag) mit „Löschen" (`deleteWorkout()`, einzelne
+  Einheit endgültig entfernen — z.B. um eine versehentlich mitgeloggte Übung wieder
+  loszuwerden, siehe Abschnitt 5).
 
 ### Wichtige Funktionen in `js/app.js`
 
 - `ensureDraft(planId)` — befüllt `S.draft[planId]` einmalig aus `lastLog(...)`, wird
   danach beim Rendern nicht mehr angefasst (sonst würden Tippen/Haken beim Neurendern
   überschrieben).
-- `touched(entry)` — wie im Altcode: eine Übung gilt nur dann als heute bewertet, wenn
-  der Haken gesetzt ist ODER das Gewicht vom vorbelegten Wert abweicht. Reine
-  „unverändert stehen gelassene" Vorgaben landen beim Speichern nicht im Verlauf.
 - `lastLog(exId, planId)` / `seriesFor(exId, planId)` — schlüsseln **ausschließlich**
   über `planId + exerciseId`, nie über den Block. Das ist Absicht (siehe Abschnitt 5).
-- `saveWorkout()` — baut aus `S.draft[S.day]` nur die berührten Einträge, speichert sie
-  als neues Workout, verwirft danach den Draft dieses Plans (wird beim nächsten Rendern
-  aus der frisch gespeicherten Einheit neu aufgebaut).
+- `saveWorkout()` — loggt **alle** Übungen des Tages mit Gewicht > 0 oder gesetztem
+  Haken, auch unverändert übernommene (siehe Abschnitt 5, Punkt 4). Überschreibt einen
+  bereits vorhandenen Eintrag für `planId + heutiges Datum` statt einen zweiten
+  anzulegen. Verwirft danach den Draft dieses Plans (wird beim nächsten Rendern aus der
+  frisch gespeicherten Einheit neu aufgebaut).
 
 ---
 
@@ -135,7 +156,15 @@ Kurve mit vier Punkten.
    Plank, in beiden Fällen ohne Eingabefeld/Haken in der Tabelle.
 3. **Kein automatisches Hochrechnen.** Die Vorgabe im Eingabefeld ist immer exakt das
    letzte Gewicht; der ↑-Marker ist nur ein Hinweis, keine Berechnung.
-4. **Unbewertete Übungen werden nicht gespeichert** (`touched()`, siehe oben).
+4. **Speichern loggt immer die ganze Einheit** (seit der Feedback-Runde vom 21.09., löst
+   die alte `touched()`-Regel ab): eine Übung mit Gewicht > 0 landet im Verlauf, auch
+   wenn nichts geändert wurde — genau dieser Fall bedeutet „gleiches Gewicht, nicht als
+   geschafft markiert", also kein ↑-Marker beim nächsten Mal. Nur Übungen ganz ohne
+   Gewicht (kein Vorwert, nichts eingetippt) UND ohne Haken werden übersprungen, es gibt
+   keine Möglichkeit mehr, eine Übung bewusst „für heute auslassen" zu markieren, ohne
+   das Gewichtsfeld leer zu lassen. Versehentlich mitgeloggte Übungen lassen sich über
+   Verlauf → Einheit öffnen → „Löschen" wieder entfernen (löscht die ganze Einheit, kein
+   Löschen einzelner Übungen innerhalb einer Einheit).
 
 ---
 
@@ -148,7 +177,18 @@ Kurve mit vier Punkten.
   const rs = await navigator.serviceWorker.getRegistrations(); for (const r of rs) await r.unregister();
   const ks = await caches.keys(); for (const k of ks) await caches.delete(k); location.reload();
   ```
-  Für ausgelieferte Updates `const CACHE = 'gymlog-v3'` hochzählen (aktuell v3).
+  Für ausgelieferte Updates `const CACHE = 'gymlog-v4'` hochzählen (aktuell v4).
+- **Zielgerät Pixel 7a/8:** im Browser-Pane mit `resize_window` auf 412 × 915 testen
+  (CSS-Pixel-Viewport beider Geräte in Chrome, DPR 2.625), nicht mehr 375 × 812
+  (iPhone-Maß aus dem ersten Umbau). Das Layout ist fluid und braucht dafür keine
+  eigene Media Query, aber neue UI-Elemente hier gegenprüfen.
+- **Screenshot-Tool manchmal flaky:** vereinzelt kommen gekachelte/doppelte Screenshots
+  oder ein `Screenshot timed out`-Fehler zurück, obwohl die Seite korrekt ist (DOM/State
+  per `javascript_tool` prüfen bestätigt das). Hilft meist: `tabs_select` auf den
+  Ziel-Tab (Fenster nach vorne holen), dann erneut screenshotten. Ebenso können `find`-
+  Refs nach einem Klick/Rerender auf einen falschen Koordinatenwert zeigen, ohne einen
+  „stale"-Fehler zu werfen — im Zweifel `javascript_tool` zur Zustandskontrolle nutzen
+  statt sich auf den Screenshot allein zu verlassen.
 - **Demodaten kommen nach dem Löschen nicht zurück** — das ist Absicht (`meta.demoSeeded`).
   Für einen erneuten Vorführzustand während der Entwicklung: `indexedDB.deleteDatabase('gymlog')`
   und neu laden, oder gezielt `DB.clear('meta')` + `DB.clear('workouts')`.
@@ -164,13 +204,18 @@ Kurve mit vier Punkten.
 
 ---
 
-## 7. Deployment (unverändert)
+## 7. Deployment
 
-Die App braucht HTTPS, damit sie installierbar und offline nutzbar ist.
+Läuft bereits produktiv über **GitHub Pages**: Repo `aschowtjak/gym-log` (öffentlich,
+enthält nur Code, keine Trainingsdaten), Branch `master`, Pages-Quelle `/` (root).
+Ein neuer Stand ist ein normaler `git push` auf `master`; GitHub baut automatisch neu,
+danach am Handy zweimal öffnen (Service-Worker-Cache, siehe Abschnitt 6).
 
-- **Netlify Drop** (https://app.netlify.com/drop): Ordner ins Browserfenster ziehen, URL ist sofort da.
-- **GitHub Pages**: Repo anlegen, pushen, Settings → Pages → Branch `main` / root.
-- Am Handy in Chrome öffnen → ⋮ → „App installieren".
+Am Handy: https://aschowtjak.github.io/gym-log/ in Chrome öffnen → ⋮ → „App
+installieren". Alle Trainingsdaten liegen ausschließlich im Browser des Geräts (IndexedDB).
+Backups laufen über Menü → „Backup exportieren" (JSON) — das ist auch der Weg auf ein
+neues Handy.
 
-Alle Daten liegen ausschließlich im Browser des Geräts. Backups laufen über
-Menü → „Backup exportieren" (JSON). Das ist auch der Weg auf ein neues Handy.
+Alternativen, falls das Repo mal nicht die richtige Wahl ist: **Netlify Drop**
+(https://app.netlify.com/drop, Ordner reinziehen, sofortige URL, kein Git nötig) oder
+lokal im Heim-WLAN (`python -m http.server 8099`, ohne HTTPS aber ohne Installierbarkeit).

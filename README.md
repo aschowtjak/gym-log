@@ -4,6 +4,8 @@ Beim Training am Handy sofort sehen, mit welchem Gewicht jede Übung heute dran 
 abgeleitet aus der letzten Einheit. Installierbare Web-App (PWA), läuft offline im
 Studio, alle Daten bleiben auf dem Gerät (IndexedDB), kein Account, kein Server.
 
+**Live:** https://aschowtjak.github.io/gym-log/
+
 ## Das Prinzip
 
 Das Arbeitsgewicht der nächsten Einheit ergibt sich vollständig aus der letzten:
@@ -14,20 +16,25 @@ Schrittweite vor.
 
 ## Eine Seite
 
-- Oben ein Umschalter **Tag A / Tag B** — mehr Pläne gibt es nicht.
+- Oben ein Umschalter **Tag A / Tag B** — mehr Pläne gibt es nicht. Darunter das
+  heutige Datum plus ein kurzer Hinweis, ob dieser Tag heute schon gespeichert wurde.
 - Darunter die Plan-Tabelle Block | Übung | Sätze × Wdh., ergänzt um ein Gewichtsfeld:
   vorbelegt mit dem Gewicht der letzten Einheit, mit **↑** markiert, wenn letztes Mal
   alles geschafft wurde. Daneben der Haken „alles geschafft" für heute.
-- Tippen auf eine Übungszeile klappt ihre Historie auf: letzte Einheiten als Liste
-  plus Fortschrittskurve.
-- Unten ein Knopf **„Einheit speichern"**.
-- Plan bearbeiten, Backup und Demodaten löschen liegen im Zahnrad-Menü oben rechts.
+- Tippen auf eine Übungszeile (erkennbar am **›**) klappt ihre Historie auf: letzte
+  Einheiten als Liste plus Fortschrittskurve.
+- Unten ein Knopf **„Einheit speichern"** — übernimmt alle angezeigten Gewichte als
+  heutige Einheit, auch unveränderte. Ein zweites Speichern am selben Tag überschreibt
+  den heutigen Eintrag, statt einen zweiten anzulegen.
+- Menü oben rechts: **Verlauf** (alle gespeicherten Einheiten mit Datum, tippen zeigt
+  Details inkl. Löschen), Plan bearbeiten, Backup und Demodaten löschen.
 
 **Nur Übungen mit Zusatzgewicht werden protokolliert.** Band Pull-Aparts, Dead Bugs,
 Side Plank und Hyperextensions stehen im Plan, haben aber kein Eingabefeld.
 **Tag A und Tag B sind strikt getrennt** — dieselbe Übung (z.B. Hip Thrust Maschine)
 hat an beiden Tagen ein eigenes Arbeitsgewicht und eine eigene Historie.
-Übungen ohne Bewertung werden **nicht** gespeichert.
+Nur Übungen ganz ohne Gewicht (keine Historie, nichts eingetragen) und ohne Haken
+werden nicht gespeichert.
 
 ## Demodaten
 
@@ -102,4 +109,4 @@ Keine Build-Schritte, keine Abhängigkeiten — Dateien ändern, neu laden, fert
 Der Service Worker liefert die gecachte Version sofort aus und lädt die neue im
 Hintergrund (stale-while-revalidate): Nach einem Deploy ist die Änderung beim
 übernächsten Start aktiv. Soll sie sofort greifen, in `sw.js` die Zeile
-`const CACHE = 'gymlog-v3'` hochzählen.
+`const CACHE = 'gymlog-v4'` hochzählen.

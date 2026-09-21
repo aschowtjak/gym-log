@@ -70,10 +70,11 @@ select{appearance:none;background-image:linear-gradient(45deg,transparent 50%,va
 .chev{color:var(--mut);font-size:20px}
 
 /* ---------- Tagesumschalter ---------- */
-.daybar{display:flex;gap:8px;margin-bottom:14px}
+.daybar{display:flex;gap:8px;margin-bottom:10px}
 .dayseg{flex:1;background:var(--bg2);border:1px solid var(--line);color:var(--mut);
   border-radius:12px;padding:13px 10px;font-size:15.5px;font-weight:700;cursor:pointer}
 .dayseg.on{background:var(--fg);color:var(--bg);border-color:transparent}
+.daymeta{color:var(--mut);font-size:12.5px;text-align:center;margin:0 4px 16px}
 
 /* ---------- Plan- und Gewichtstabelle ---------- */
 table{width:100%;border-collapse:collapse;font-size:14px}
@@ -89,6 +90,9 @@ td.no{color:var(--bad);font-weight:700}
 .ptab td.num{white-space:nowrap}
 .ex-row{cursor:pointer}
 .ex-row:active td{background:var(--bg3)}
+.exname{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.chev-ico{color:var(--mut);font-size:17px;flex:0 0 auto;transition:transform .15s ease}
+.chev-ico.on{color:var(--acc2);transform:rotate(90deg)}
 
 /* Gewicht + Haken direkt unter der Planzeile, volle Breite, große Tippflächen */
 .w-row td{border-top:0;padding:0 6px 10px}
