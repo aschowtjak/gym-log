@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<meta name="theme-color" content="#0f1115">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Gym Log</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<header id="topbar">
+  <div class="tb-left"><button class="icon-btn hidden" id="backBtn" data-action="back" aria-label="Zurück">‹</button></div>
+  <h1 id="title">Training</h1>
+  <div class="tb-right"><button class="icon-btn" data-action="menu" aria-label="Menü">⚙</button></div>
+</header>
+
+<main id="app"></main>
+
+<div id="savebar" class="hidden">
+  <button class="btn primary full" data-action="save-workout">Einheit speichern</button>
+</div>
+
+<div id="modal" class="hidden"><div id="modalBox"></div></div>
+<div id="toast" class="hidden"></div>
+
+<script src="js/db.js"></script>
+<script src="js/seed.js"></script>
+<script src="js/chart.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

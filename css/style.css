@@ -1,0 +1,136 @@
+:root{
+  --bg:#0f1115; --bg2:#171a21; --bg3:#1f2430; --line:#2b3140;
+  --fg:#e8ecf3; --mut:#8e98ab; --acc:#4ade80; --acc2:#38bdf8;
+  --warn:#fbbf24; --bad:#f87171; --r:14px;
+  --safe-b:env(safe-area-inset-bottom,0px);
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0;background:var(--bg);color:var(--fg);
+  font:16px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  overscroll-behavior-y:none}
+body{padding-bottom:calc(88px + var(--safe-b))}
+
+/* ---------- top bar ---------- */
+#topbar{position:sticky;top:0;z-index:30;display:flex;align-items:center;gap:8px;
+  padding:calc(env(safe-area-inset-top,0px) + 10px) 12px 10px;
+  background:rgba(15,17,21,.92);backdrop-filter:blur(12px);border-bottom:1px solid var(--line)}
+#topbar h1{flex:1;margin:0;font-size:19px;font-weight:700;text-align:center}
+.tb-left,.tb-right{width:44px;display:flex}
+.tb-right{justify-content:flex-end}
+.icon-btn{background:none;border:0;color:var(--fg);font-size:22px;padding:4px 8px;cursor:pointer}
+#backBtn{font-size:30px;line-height:1}
+
+/* ---------- layout ---------- */
+main{padding:14px 12px 20px;max-width:760px;margin:0 auto}
+.card{background:var(--bg2);border:1px solid var(--line);border-radius:var(--r);
+  padding:14px;margin-bottom:12px}
+.card.tight{padding:10px 12px}
+.row{display:flex;align-items:center;gap:10px}
+.grow{flex:1;min-width:0}
+h2{font-size:16px;margin:0 0 10px}
+.mut{color:var(--mut);font-size:13px}
+.mut.sm{font-size:12px}
+.hidden{display:none !important}
+.sec-title{font-size:12px;letter-spacing:.09em;text-transform:uppercase;color:var(--mut);
+  margin:18px 4px 8px;font-weight:700}
+.sec-title:first-child{margin-top:2px}
+.empty{text-align:center;color:var(--mut);padding:34px 16px;font-size:14px}
+.ellip{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* ---------- buttons ---------- */
+button{font-family:inherit}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;
+  background:var(--bg3);color:var(--fg);border:1px solid var(--line);
+  border-radius:11px;padding:11px 15px;font-size:15px;font-weight:600;cursor:pointer}
+.btn:active{transform:scale(.97)}
+.btn.primary{background:var(--acc);color:#04210f;border-color:transparent}
+.btn.blue{background:var(--acc2);color:#04212e;border-color:transparent}
+.btn.ghost{background:transparent}
+.btn.danger{color:var(--bad);border-color:#4a2530}
+.btn.full{width:100%}
+.btn-row{display:flex;gap:8px}
+.btn-row>*{flex:1}
+
+/* ---------- inputs ---------- */
+input,select,textarea{font-family:inherit;font-size:16px;color:var(--fg);
+  background:var(--bg3);border:1px solid var(--line);border-radius:10px;padding:10px 12px;width:100%}
+input:focus,select:focus,textarea:focus{outline:2px solid var(--acc2);outline-offset:-1px}
+label.fld{display:block;margin-bottom:12px}
+label.fld>span{display:block;font-size:12px;color:var(--mut);margin-bottom:5px;font-weight:600}
+select{appearance:none;background-image:linear-gradient(45deg,transparent 50%,var(--mut) 50%),
+  linear-gradient(135deg,var(--mut) 50%,transparent 50%);
+  background-position:calc(100% - 17px) 50%,calc(100% - 12px) 50%;
+  background-size:5px 5px,5px 5px;background-repeat:no-repeat;padding-right:34px}
+
+/* ---------- list items (Menü) ---------- */
+.item{display:flex;align-items:center;gap:12px;background:var(--bg2);border:1px solid var(--line);
+  border-radius:var(--r);padding:13px 14px;margin-bottom:9px;cursor:pointer}
+.item:active{background:var(--bg3)}
+.item .grow strong{display:block;font-size:15.5px}
+.chev{color:var(--mut);font-size:20px}
+
+/* ---------- Tagesumschalter ---------- */
+.daybar{display:flex;gap:8px;margin-bottom:14px}
+.dayseg{flex:1;background:var(--bg2);border:1px solid var(--line);color:var(--mut);
+  border-radius:12px;padding:13px 10px;font-size:15.5px;font-weight:700;cursor:pointer}
+.dayseg.on{background:var(--fg);color:var(--bg);border-color:transparent}
+
+/* ---------- Plan- und Gewichtstabelle ---------- */
+table{width:100%;border-collapse:collapse;font-size:14px}
+th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--mut);padding:6px 6px;font-weight:700}
+td{padding:9px 6px;border-top:1px solid var(--line);vertical-align:top}
+td.num{text-align:right;font-variant-numeric:tabular-nums}
+td.nowrap,th.nowrap{white-space:nowrap}
+td.ok{color:var(--acc);font-weight:700}
+td.no{color:var(--bad);font-weight:700}
+
+.ptab td.blk-c{width:1%;white-space:nowrap;color:var(--acc2);font-weight:800;font-size:12.5px;padding-top:11px}
+.ptab .hint{color:var(--mut);font-size:12px;margin-top:2px}
+.ptab td.num{white-space:nowrap}
+.ex-row{cursor:pointer}
+.ex-row:active td{background:var(--bg3)}
+
+/* Gewicht + Haken direkt unter der Planzeile, volle Breite, große Tippflächen */
+.w-row td{border-top:0;padding:0 6px 10px}
+.wctrl{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.winp{position:relative;width:112px}
+.winp input{height:46px;text-align:center;font-size:17px;font-weight:700;padding:0 34px 0 10px}
+.winp .unit{position:absolute;right:11px;top:50%;transform:translateY(-50%);
+  color:var(--mut);font-size:12px;font-weight:600;pointer-events:none}
+.up-badge{color:var(--warn);font-weight:800;font-size:19px;margin-left:-4px}
+.chk{display:flex;align-items:center;gap:8px;cursor:pointer;color:var(--mut);font-size:13.5px;font-weight:600}
+.chk input{width:22px;height:22px;flex:0 0 auto}
+
+/* Historie / Kurve je Übung */
+.hist-row td{border-top:0;padding:0 0 8px}
+.histbox{background:var(--bg3);border-radius:12px;padding:8px 6px 2px;margin:0 2px}
+.chartbox{padding:4px 2px}
+svg.chart{width:100%;height:auto;display:block}
+.histtab{font-size:12.5px}
+.histtab th{padding:4px 8px}
+.histtab td{padding:6px 8px;border-top:1px solid var(--line)}
+
+/* ---------- Speichern-Leiste ---------- */
+#savebar{position:fixed;left:0;right:0;bottom:0;z-index:35;
+  background:rgba(15,17,21,.96);backdrop-filter:blur(12px);border-top:1px solid var(--line);
+  padding:10px 12px calc(10px + var(--safe-b))}
+#savebar .btn{max-width:760px;margin:0 auto;display:flex}
+
+/* ---------- modal ---------- */
+#modal{position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.6);
+  display:flex;align-items:flex-end;justify-content:center;backdrop-filter:blur(2px)}
+#modalBox{background:var(--bg2);border:1px solid var(--line);border-radius:18px 18px 0 0;
+  width:100%;max-width:760px;max-height:88vh;overflow:auto;
+  padding:18px 16px calc(20px + var(--safe-b));animation:up .18s ease-out}
+@keyframes up{from{transform:translateY(24px);opacity:.4}}
+.modal-h{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+.modal-h h2{flex:1;margin:0}
+
+/* ---------- toast ---------- */
+#toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(96px + var(--safe-b));
+  z-index:70;background:var(--fg);color:var(--bg);padding:11px 17px;border-radius:99px;
+  font-size:14px;font-weight:700;box-shadow:0 8px 26px rgba(0,0,0,.5);max-width:90vw;text-align:center}
+
+/* ---------- Plan-Editor ---------- */
+.xbtn{background:none;border:0;color:var(--mut);font-size:17px;cursor:pointer;padding:4px 6px}
+.g3{display:grid;grid-template-columns:72px 1fr 1fr;gap:8px}
