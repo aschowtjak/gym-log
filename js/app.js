@@ -11,10 +11,13 @@ const S = {
   plans: [],
   workouts: [],             // neueste zuerst
   day: null,                 // aktuell gewählte planId
-  draft: {},                 // { [planId]: { [exerciseId]: {weight, done} } }
+  draft: {},                 // { [planId]: { _date, [exerciseId]: {weight, done} } }
+  dates: {},                 // { [planId]: 'YYYY-MM-DD' } aktuell bearbeitetes Datum, Default = heute (nicht persistiert)
   openKey: null,             // "planId|exerciseId" der aufgeklappten Historie
   editPlan: null,
   stopwatch: { startedAt: null, elapsed: 0, running: false },
+  histPlan: null,             // gewählter Plan auf der Verlauf-Seite
+  histFilter: '10',           // '10' | 'all' | '12' | '6' | '2' | '1' (Monate)
 };
 
 /* ---------------- Helfer ---------------- */
@@ -193,15 +196,21 @@ function saveDraft() {
 /* ---------------- Auswertung ---------------- */
 function entryIn(w, exId) { return (w.entries || []).find((e) => e.exerciseId === exId) || null; }
 
-/* Letztes Protokoll dieser Übung in diesem Plan (planId + exerciseId, nie nur die Übung). */
-function lastLog(exId, planId) {
+/* Letztes Protokoll dieser Übung in diesem Plan (planId + exerciseId, nie nur die Übung),
+   optional strikt vor einem gegebenen Datum (für rückwirkendes Bearbeiten: die Einheit an
+   diesem Datum selbst soll dabei nicht als "vorheriges Mal" zählen). */
+function lastLog(exId, planId, beforeDate) {
   for (const w of S.workouts) {
     if (w.planId !== planId) continue;
+    if (beforeDate && !(w.date < beforeDate)) continue;
     const e = entryIn(w, exId);
     if (e) return { weight: num(e.weight), done: !!e.done, date: w.date };
   }
   return null;
 }
+
+/* Aktuell bearbeitetes Datum für einen Plan – Default heute, ephemer (nicht in IndexedDB). */
+function curDateFor(planId) { return S.dates[planId] || todayISO(); }
 
 /* Datenreihe für die Kurve, chronologisch. */
 function seriesFor(exId, planId) {
@@ -211,11 +220,7 @@ function seriesFor(exId, planId) {
     if (w.planId !== planId) continue;
     const e = entryIn(w, exId);
     if (!e || !(num(e.weight) > 0)) continue;
-    out.push({
-      t: tsOf(w.date), y: num(e.weight), date: w.date,
-      label: e.done ? 'geschafft' : 'nicht geschafft',
-      c: e.done ? undefined : '#f87171',
-    });
+    out.push({ t: tsOf(w.date), y: num(e.weight), date: w.date, id: w.id });
   }
   return out;
 }
@@ -246,12 +251,28 @@ function viewMain() {
     esc(p.name) + '</button>').join('') + '</div>';
 
   const today = todayISO();
-  const todaysW = S.workouts.find((w) => w.planId === plan.id && w.date === today);
-  const lastOther = S.workouts.find((w) => w.planId === plan.id && w.date !== today);
-  let meta = fmtFullDate(today);
-  meta += todaysW ? ' · heute bereits gespeichert (erneutes Speichern überschreibt)'
-    : lastOther ? ' · zuletzt ' + fmtShort(lastOther.date) : ' · noch nie trainiert';
-  h += '<div class="daymeta">' + esc(meta) + '</div>';
+  const curDate = curDateFor(plan.id);
+  const planWorkouts = S.workouts.filter((w) => w.planId === plan.id); // schon neueste zuerst
+  const existingW = planWorkouts.find((w) => w.date === curDate);
+
+  let meta = fmtFullDate(curDate);
+  if (curDate === today) {
+    const prevW = planWorkouts.find((w) => w.date < curDate);
+    meta += existingW ? ' · heute bereits gespeichert (erneutes Speichern überschreibt)'
+      : prevW ? ' · zuletzt ' + fmtShort(prevW.date) : ' · noch nie trainiert';
+  } else {
+    meta += existingW ? ' · wird bearbeitet (Speichern überschreibt)' : ' · neue Einheit, noch nicht gespeichert';
+  }
+
+  h += '<div class="daymeta"><div class="daymeta-row">' +
+    '<input type="date" class="date-in" data-in="cur-date" data-plan="' + plan.id + '" value="' + curDate + '" max="' + today + '">' +
+    '<select class="hist-pick" data-in="hist-pick" data-plan="' + plan.id + '">' +
+    '<option value="">Vergangene Einheit…</option>' +
+    planWorkouts.map((w) => '<option value="' + w.date + '"' + (w.date === curDate ? ' selected' : '') + '>' +
+      esc(fmtShort(w.date) + (w.demo ? ' · Demo' : '')) + '</option>').join('') +
+    '</select></div><div class="daymeta-txt">' + esc(meta) +
+    (curDate !== today ? '<button type="button" class="lnk" data-action="today" data-id="' + plan.id + '">heute</button>' : '') +
+    '</div></div>';
 
   /* Aufeinanderfolgende Positionen mit gleichem Blockbuchstaben zu einer Gruppe
      zusammenfassen, jede Gruppe bekommt eine eigene umrandete Sektion. */
@@ -274,16 +295,25 @@ function viewMain() {
 }
 
 function ensureDraft(planId) {
-  if (S.draft[planId]) return;
+  const date = curDateFor(planId);
+  const cur = S.draft[planId];
+  if (cur && cur._date === date) return;
+
   const plan = S.plans.find((p) => p.id === planId);
-  const d = {};
+  const existingW = S.workouts.find((w) => w.planId === planId && w.date === date);
+  const d = { _date: date };
   plan.items.forEach((it) => {
     if (unitOf(it.exerciseId) === 'x') return;
-    const prev = lastLog(it.exerciseId, planId);
-    const w = prev && prev.weight > 0 ? fmtKg(prev.weight) : '';
-    d[it.exerciseId] = { weight: w, done: false };
+    const e = existingW && entryIn(existingW, it.exerciseId);
+    if (e) {
+      d[it.exerciseId] = { weight: e.weight > 0 ? fmtKg(e.weight) : '', done: !!e.done };
+    } else {
+      const prev = lastLog(it.exerciseId, planId, date);
+      d[it.exerciseId] = { weight: prev && prev.weight > 0 ? fmtKg(prev.weight) : '', done: false };
+    }
   });
   S.draft[planId] = d;
+  saveDraft();
 }
 
 function planRow(plan, it) {
@@ -292,7 +322,7 @@ function planRow(plan, it) {
   const tracked = unit !== 'x';
   const isOpen = tracked && S.openKey === plan.id + '|' + exId;
   const d = tracked ? S.draft[plan.id][exId] : null;
-  const prev = tracked ? lastLog(exId, plan.id) : null;
+  const prev = tracked ? lastLog(exId, plan.id, curDateFor(plan.id)) : null;
   const up = tracked && prev && prev.done && prev.weight > 0;
 
   let h = '<div class="nm"' + (tracked ? ' data-action="toggle-hist" data-id="' + exId + '"' : '') + '>' +
@@ -322,27 +352,42 @@ function planRow(plan, it) {
   return h;
 }
 
+/* Chart + Tabelle für eine Übungsreihe – geteilt zwischen der aufklappbaren Historie
+   auf der Hauptseite (historyBox(), Chart unbegrenzt/Tabelle letzte 10) und den
+   Chartkarten der Verlauf-Seite (viewHistory(), beides gleich gefiltert). Mit
+   opts.clickable öffnet ein Tippen auf eine Tabellenzeile die ganze Einheit dieses
+   Tages (openWorkoutDetail) – einziger verbliebener Weg, eine ganze Einheit zu
+   löschen, seit die Verlauf-Seite keine flache Sitzungsliste mehr ist. */
+function chartCard(chartPts, tablePts, unit, opts) {
+  opts = opts || {};
+  let h = '<div class="chartbox">' + Chart.line(chartPts, { unit }) + '</div>';
+  if (tablePts.length) {
+    h += '<div class="histtab-wrap"><table class="histtab"><tr><th>Datum</th><th class="num">Gewicht</th></tr>';
+    tablePts.slice().reverse().forEach((p) => {
+      const attrs = opts.clickable ? ' class="clickable" data-action="hist-open" data-id="' + p.id + '"' : '';
+      h += '<tr' + attrs + '><td>' + fmtShort(p.date) + '</td><td class="num">' + fmtKg(p.y) + ' ' + unit + '</td></tr>';
+    });
+    h += '</table></div>';
+  }
+  return h;
+}
+
 function historyBox(exId, planId, unit) {
   const pts = seriesFor(exId, planId);
-  let h = '<div class="histbox"><div class="chartbox">' + Chart.line(pts, { unit: UNITS[unit] }) + '</div>';
-  if (pts.length) {
-    h += '<table class="histtab"><tr><th>Datum</th><th class="num">Gewicht</th><th class="num">Status</th></tr>';
-    pts.slice(-10).reverse().forEach((p) => {
-      h += '<tr><td>' + fmtShort(p.date) + '</td><td class="num">' + fmtKg(p.y) + ' ' + UNITS[unit] + '</td>' +
-        '<td class="num ' + (p.c ? 'no' : 'ok') + '">' + (p.c ? '✗' : '✓') + '</td></tr>';
-    });
-    h += '</table>';
-  }
-  return h + '</div>';
+  return '<div class="histbox">' + chartCard(pts, pts.slice(-10), UNITS[unit], {}) + '</div>';
 }
 
 /* ---------------- Einheit speichern ---------------- */
 /* Speichert alle Übungen mit einem Gewicht (auch unverändert übernommene) oder
-   abgehaktem "geschafft". Ein zweites Speichern am selben Tag überschreibt den
-   heutigen Eintrag, statt einen zweiten anzulegen. */
+   abgehaktem "geschafft", für das aktuell gewählte Datum (Default heute, editierbar
+   für rückwirkendes Bearbeiten, siehe curDateFor()). Ein zweites Speichern desselben
+   Datums überschreibt den vorhandenen Eintrag, statt einen zweiten anzulegen. Der
+   Draft bleibt danach erhalten (Haken bleiben angehakt) – ein Reset passiert erst,
+   wenn ein anderes Datum gewählt wird (siehe ensureDraft()). */
 async function saveWorkout() {
   const plan = S.plans.find((p) => p.id === S.day);
   if (!plan) return;
+  const date = curDateFor(plan.id);
   const draft = S.draft[plan.id] || {};
   const entries = [];
   let trackedCount = 0;
@@ -357,7 +402,6 @@ async function saveWorkout() {
   if (!entries.length) { toast('Nichts einzutragen – erst ein Gewicht eintragen'); return; }
   const missing = trackedCount - entries.length;
 
-  const date = todayISO();
   const existing = S.workouts.find((w) => w.planId === plan.id && w.date === date);
   const w = {
     id: existing ? existing.id : uid(),
@@ -367,12 +411,14 @@ async function saveWorkout() {
   await DB.put('workouts', w);
   S.workouts = existing ? S.workouts.map((x) => (x.id === w.id ? w : x)) : [w, ...S.workouts];
   S.workouts.sort(byDateDesc);
-  delete S.draft[plan.id];
   saveDraft();
   S.openKey = null;
   render();
-  toast((existing ? 'Heutige Einheit aktualisiert' : 'Einheit gespeichert') +
-    (missing ? ' · ' + missing + ' Übung' + (missing > 1 ? 'en' : '') + ' ohne Gewicht nicht gespeichert' : ''), 3200);
+  const today = todayISO();
+  const label = date === today
+    ? (existing ? 'Heutige Einheit aktualisiert' : 'Einheit gespeichert')
+    : (existing ? 'Einheit vom ' + fmtShort(date) + ' aktualisiert' : 'Einheit für ' + fmtShort(date) + ' gespeichert');
+  toast(label + (missing ? ' · ' + missing + ' Übung' + (missing > 1 ? 'en' : '') + ' ohne Gewicht nicht gespeichert' : ''), 3200);
 }
 
 /* ---------------- Menü ---------------- */
@@ -380,7 +426,7 @@ function openMenu() {
   const hasDemo = S.workouts.some((w) => w.demo);
   let h = '<div class="modal-h"><h2>Menü</h2><button class="icon-btn" data-action="modal-close">✕</button></div>';
   h += '<div class="sec-title">Verlauf</div>' +
-    '<div class="item" data-action="history"><div class="grow"><strong>Alle Einheiten</strong>' +
+    '<div class="item" data-action="history"><div class="grow"><strong>Fortschritt &amp; Verlauf</strong>' +
     '<span class="mut sm">' + S.workouts.length + (S.workouts.length === 1 ? ' Einheit gespeichert' : ' Einheiten gespeichert') +
     '</span></div><span class="chev">›</span></div>';
   h += '<div class="sec-title">Pläne</div>';
@@ -403,24 +449,56 @@ async function demoDel() {
   for (const w of toDel) await DB.del('workouts', w.id);
   S.workouts = S.workouts.filter((w) => !w.demo);
   S.draft = {};
+  S.dates = {};
   await DB.put('meta', { key: 'draft', value: S.draft });
   closeModal(); render();
   toast('Demodaten gelöscht');
 }
 
 /* ---------------- Verlauf ---------------- */
+const HIST_FILTERS = [['10', 'Letzte 10'], ['all', 'Gesamt'], ['12', '12 Mon.'], ['6', '6 Mon.'], ['2', '2 Mon.'], ['1', '1 Mon.']];
+
+/* Filtert eine chronologische Punktreihe (seriesFor()) nach der Verlauf-Seiten-Auswahl. */
+function filterSeries(pts, filter) {
+  if (filter === '10') return pts.slice(-10);
+  if (filter === 'all') return pts;
+  const months = parseInt(filter, 10);
+  const cutoff = Date.now() - months * 30 * 24 * 3600 * 1000;
+  return pts.filter((p) => p.t >= cutoff);
+}
+
+/* Pläne oben (Umschalter wie auf der Hauptseite), darunter je Übung eine Chartkarte
+   mit Kurve + Tabelle für den gewählten Zeitraum/Umfang (statt der früheren flachen,
+   nach Monat gruppierten Sitzungsliste). */
 function viewHistory() {
-  if (!S.workouts.length) return '<div class="empty">Noch keine Trainings gespeichert.</div>';
-  let h = '', month = '';
-  S.workouts.forEach((w) => {
-    const m = new Date(w.date + 'T12:00:00').toLocaleDateString('de-DE', { month: 'long', year: 'numeric' });
-    if (m !== month) { month = m; h += '<div class="sec-title">' + esc(m) + '</div>'; }
-    const done = (w.entries || []).filter((e) => e.done).length;
-    h += '<div class="item" data-action="hist-open" data-id="' + w.id + '">' +
-      '<div class="grow"><strong class="ellip">' + esc(w.planName || 'Training') + (w.demo ? ' · Demo' : '') + '</strong>' +
-      '<span class="mut sm">' + fmtDate(w.date) + ' · ' + (w.entries || []).length + ' Übungen · ' + done + '× geschafft</span></div>' +
-      '<span class="chev">›</span></div>';
+  if (!S.plans.length) return '<div class="empty">Noch kein Plan angelegt.</div>';
+  if (!S.histPlan || !S.plans.some((p) => p.id === S.histPlan)) S.histPlan = S.day || S.plans[0].id;
+  const plan = S.plans.find((p) => p.id === S.histPlan);
+
+  let h = '<div class="daybar">' + S.plans.map((p) =>
+    '<button class="dayseg' + (p.id === S.histPlan ? ' on' : '') + '" data-action="hist-plan" data-id="' + p.id + '">' +
+    esc(p.name) + '</button>').join('') + '</div>';
+
+  h += '<div class="filter-row">' + HIST_FILTERS.map(([v, label]) =>
+    '<button class="fchip' + (S.histFilter === v ? ' on' : '') + '" data-action="hist-filter" data-id="' + v + '">' +
+    esc(label) + '</button>').join('') + '</div>';
+
+  const tracked = plan.items.filter((it) => unitOf(it.exerciseId) !== 'x');
+  let any = false;
+  tracked.forEach((it) => {
+    const exId = it.exerciseId, unit = unitOf(exId);
+    const full = seriesFor(exId, plan.id);
+    if (!full.length) return;
+    any = true;
+    const pts = filterSeries(full, S.histFilter);
+    h += '<div class="hist-card"><div class="hist-card-h">' + esc(exName(exId)) +
+      '<span class="mut sm">' + esc(grpLabel(grpKey(it.block))) + '</span></div>';
+    h += pts.length ? chartCard(pts, pts, UNITS[unit], { clickable: true })
+      : '<div class="empty" style="padding:22px 4px">Keine Einträge im gewählten Zeitraum.</div>';
+    h += '</div>';
   });
+  if (!any) h += '<div class="empty">Noch keine Trainingsdaten für „' + esc(plan.name) + '".</div>';
+
   return h;
 }
 
@@ -492,6 +570,7 @@ async function savePlan() {
   S.plans = S.plans.map((x) => (x.id === p.id ? p : x));
   sortPlans();
   delete S.draft[p.id];
+  delete S.dates[p.id];
   saveDraft();
   S.editPlan = null;
   S.day = p.id;
@@ -688,8 +767,11 @@ function onClick(ev) {
     case 'day': S.day = id; S.openKey = null; render(); break;
     case 'toggle-hist': { const key = S.day + '|' + id; S.openKey = S.openKey === key ? null : key; render(); break; }
     case 'save-workout': saveWorkout(); break;
+    case 'today': delete S.dates[id]; S.openKey = null; render(); break;
 
     case 'history': closeModal(); nav('history'); break;
+    case 'hist-plan': S.histPlan = id; render(); break;
+    case 'hist-filter': S.histFilter = id; render(); break;
     case 'hist-open': openWorkoutDetail(id); break;
     case 'hist-del': deleteWorkout(id); break;
 
@@ -732,6 +814,12 @@ function onChange(ev) {
   if (el.dataset.in === 'done') {
     const pid = el.dataset.plan, id = el.dataset.id;
     if (S.draft[pid] && S.draft[pid][id]) { S.draft[pid][id].done = el.checked; saveDraft(); }
+  } else if (el.dataset.in === 'cur-date' || el.dataset.in === 'hist-pick') {
+    const pid = el.dataset.plan;
+    if (!el.value) return;
+    S.dates[pid] = el.value;
+    S.openKey = null;
+    render();
   }
 }
 

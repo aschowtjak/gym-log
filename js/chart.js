@@ -19,7 +19,7 @@ const Chart = (function () {
 
   const fmtDay = (ts) => new Date(ts).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' });
 
-  /* points: [{t: Zeitstempel(ms), y: Zahl, label: string}] */
+  /* points: [{t: Zeitstempel(ms), y: Zahl}] */
   function line(points, opts) {
     opts = opts || {};
     if (!points.length) return '<div class="empty">Noch keine Daten für diese Übung.</div>';
@@ -53,13 +53,6 @@ const Chart = (function () {
       ' L' + coords[0][0].toFixed(1) + ' ' + (H - PB) + ' Z';
 
     const color = opts.color || '#4ade80';
-    let dots = '', hits = '';
-    coords.forEach((c, i) => {
-      dots += '<circle cx="' + c[0].toFixed(1) + '" cy="' + c[1].toFixed(1) +
-        '" r="3.4" fill="' + (points[i].c || color) + '" stroke="#171a21" stroke-width="1.5" data-dot="' + i + '"/>';
-      hits += '<circle cx="' + c[0].toFixed(1) + '" cy="' + c[1].toFixed(1) +
-        '" r="15" fill="transparent" data-action="pt" data-i="' + i + '" style="cursor:pointer"/>';
-    });
 
     const xl = '<text x="' + PL + '" y="' + (H - 6) + '" font-size="10" fill="#8e98ab">' + fmtDay(t0) + '</text>' +
       '<text x="' + (W - PR) + '" y="' + (H - 6) + '" text-anchor="end" font-size="10" fill="#8e98ab">' + fmtDay(t1) + '</text>';
@@ -72,7 +65,7 @@ const Chart = (function () {
       '<path d="' + area + '" fill="url(#g1)"/>' +
       '<path d="' + path + '" fill="none" stroke="' + color + '" stroke-width="2.2" ' +
       'stroke-linejoin="round" stroke-linecap="round"/>' +
-      dots + hits + xl + '</svg>';
+      xl + '</svg>';
   }
 
   return { line, fmtNum };

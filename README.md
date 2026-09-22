@@ -17,7 +17,11 @@ Schrittweite vor.
 ## Eine Seite
 
 - Oben ein Umschalter **Trainingseinheit 1 / 2** — mehr Pläne gibt es nicht. Darunter
-  das heutige Datum plus ein kurzer Hinweis, ob dieser Tag heute schon gespeichert wurde.
+  ein **editierbares Datum** (heute vorausgewählt) plus ein Dropdown mit vergangenen
+  Einheiten dieses Plans — beides setzt dasselbe Datum. Ist ein anderes Datum als heute
+  gewählt, zeigt die Seite genau diese Einheit zum **rückwirkenden Bearbeiten**: Felder
+  füllen sich mit den damals gespeicherten Werten, „Einheit speichern" überschreibt sie.
+  Ein „heute"-Link führt zurück.
 - Darunter je Block (A/B/C) eine eigene Karte mit ihren Übungen, Sätze stehen einmal
   in der Block-Überschrift („Block A · 3 Sätze"). Pro Übung: Name (+ Hinweistext),
   daneben eine Pille mit Wiederholungen × Gewicht (nur die Zahl ist editierbar) und
@@ -25,12 +29,16 @@ Schrittweite vor.
   füllt sich grün. Der zweite, gedämpfte Pfeil links davon (falls vorhanden) zeigt,
   dass letztes Mal schon alles geschafft war.
 - Tippen auf eine Übungszeile (erkennbar am **›**) klappt ihre Historie auf: letzte
-  Einheiten als Liste plus Fortschrittskurve.
-- Unten ein Knopf **„Einheit speichern"** — übernimmt alle angezeigten Gewichte als
-  heutige Einheit, auch unveränderte. Ein zweites Speichern am selben Tag überschreibt
-  den heutigen Eintrag, statt einen zweiten anzulegen.
-- Menü oben rechts: **Verlauf** (alle gespeicherten Einheiten mit Datum, tippen zeigt
-  Details inkl. Löschen), Plan bearbeiten, Backup und Demodaten löschen.
+  Einheiten als scrollbare Tabelle plus Fortschrittskurve (reine Linie, ohne Punkte).
+- Unten ein Knopf **„Einheit speichern"** — übernimmt alle angezeigten Gewichte für das
+  gewählte Datum, auch unveränderte. Ein zweites Speichern desselben Datums überschreibt
+  den vorhandenen Eintrag, statt einen zweiten anzulegen; die Haken bleiben dabei
+  angehakt (kein Reset). Zurückgesetzt wird ein Haken erst, wenn ein anderes, noch nicht
+  gespeichertes Datum gewählt wird.
+- Menü oben rechts: **Fortschritt & Verlauf** (Pläne oben, darunter je Übung eine
+  Chartkarte mit Kurve + Tabelle, filterbar nach „Letzte 10" oder Zeitraum — Tippen auf
+  einen Tabelleneintrag öffnet die ganze Einheit dieses Tages inkl. Löschen), Plan
+  bearbeiten, Backup und Demodaten löschen.
 
 **Nur Übungen mit Zusatzgewicht werden protokolliert.** Band Pull-Aparts, Dead Bugs,
 Side Plank und Hyperextensions stehen im Plan, haben aber kein Eingabefeld — nur die
@@ -113,4 +121,4 @@ Keine Build-Schritte, keine Abhängigkeiten — Dateien ändern, neu laden, fert
 Der Service Worker liefert die gecachte Version sofort aus und lädt die neue im
 Hintergrund (stale-while-revalidate): Nach einem Deploy ist die Änderung beim
 übernächsten Start aktiv. Soll sie sofort greifen, in `sw.js` die Zeile
-`const CACHE = 'gymlog-v8'` (aktueller Stand) hochzählen.
+`const CACHE = 'gymlog-v9'` (aktueller Stand) hochzählen.
