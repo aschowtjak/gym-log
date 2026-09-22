@@ -4,7 +4,10 @@ Stand: 22.09.2026, nach dem Rückbau auf eine Seite, einer Feedback-Runde aus de
 Betrieb (Deployment, Nutzung am Handy), einer zweiten Runde mit Layout-Umbau + neuen
 Features und einer dritten Runde mit der finalen Optik der Block-Karten, dem
 Zeilen-Layout (Pille + integrierter Pfeil-Haken) und einer Umbenennung/Vereinheitlichung
-der Pläne (siehe Abschnitt 7). Keine offene Design-Aufgabe mehr, `PROMPT.md` ist historisch.
+der Pläne (siehe Abschnitt 7). Design-Aufgabe damit abgeschlossen. `PROMPT.md` enthält
+jetzt den Auftrag für die **nächste** Session — diesmal echte Funktionsänderungen
+(Verlauf/Charts entschlacken, Haken-Reset-Verhalten, Datum editierbar, Verlauf-Seite neu),
+siehe Abschnitt 9 für Details und Code-Stellen.
 
 **⚠️ Offener Pull Request, noch nicht gemerged:**
 [github.com/aschowtjak/gym-log/pull/1](https://github.com/aschowtjak/gym-log/pull/1)
@@ -375,3 +378,55 @@ neues Handy.
 Alternativen, falls das Repo mal nicht die richtige Wahl ist: **Netlify Drop**
 (https://app.netlify.com/drop, Ordner reinziehen, sofortige URL, kein Git nötig) oder
 lokal im Heim-WLAN (`python -m http.server 8099`, ohne HTTPS aber ohne Installierbarkeit).
+
+---
+
+## 9. Nächste Session: Verlauf/Charts, Haken-Reset, Datum, Verlauf-Seite (offen)
+
+Drei Wünsche aus der Design-Session, diesmal echte Funktionsänderungen, kein reines
+Styling. Der volle, wörtliche Auftrag steht in `PROMPT.md` — hier die technischen
+Fundstellen, damit die nächste Session nicht erst suchen muss.
+
+**A) Verlaufs-Chart entschlacken.** In der aufgeklappten Historie einer Übung
+(`historyBox()`, [app.js:325](js/app.js:325)) soll die **Status-Spalte** der Tabelle
+weg (`historyBox()`, [app.js:329](js/app.js:329) und
+[app.js:332](js/app.js:332) — zeigt aktuell ✓/✗ pro Eintrag). Die **roten Punkte** im
+Chart bei „nicht geschafft" sollen auch weg: `seriesFor()` setzt aktuell
+`c: e.done ? undefined : '#f87171'` ([app.js:217](js/app.js:217)), `js/chart.js`
+nutzt das in der `dots`-Erzeugung ([chart.js:58](js/chart.js:58)) als Punktfarbe.
+Begründung des Nutzers: geht aus dem Kurvenverlauf (steigt/steigt nicht) ohnehin
+hervor. **Bevor Code geändert wird:** Entwurf mit und ohne Punkte (Marker) zeigen,
+jeweils simuliert über ~10 und ~20 Wochen Trainingsdaten (bei zwei Einheiten/Woche
+im Wechsel sind das grob 5 bzw. 10 Datenpunkte je Übung/Plan) — der Nutzer will
+sehen, wie es bei mehr Datenpunkten wirkt, bevor er sich entscheidet.
+
+**B) Haken bleiben nach dem Speichern erhalten, Datum wird editierbar.**
+`saveWorkout()` ([app.js:343](js/app.js:343)) löscht am Ende den Draft
+(`delete S.draft[plan.id]`, [app.js:370](js/app.js:370)); beim nächsten Rendern baut
+`ensureDraft()` ([app.js:276](js/app.js:276)) ihn aus `lastLog(...)` neu auf und
+setzt dabei **immer** `done: false` — deshalb wirken die Haken nach dem Speichern
+„zurückgesetzt". Nutzerwunsch: Haken sollen nach dem Speichern **angehakt bleiben**
+und erst zurückgesetzt werden, wenn eine neue Einheit an einem **anderen Datum**
+begonnen wird (nicht bei jedem Speichern desselben Tages). Zusätzlich: Datum der
+Einheit soll **editierbar** sein (aktuell hart auf `todayISO()` verdrahtet,
+[app.js:360](js/app.js:360), keinerlei Datumsauswahl im UI), mit heutigem Datum
+vorbelegt. Und: ein **Dropdown zum Öffnen vergangener Trainings**, um sie rückwirkend
+zu ändern — aktuell ist `openWorkoutDetail()` ([app.js:427](js/app.js:427)) nur eine
+Lese-Ansicht mit „Löschen" der ganzen Einheit, kein Bearbeiten einzelner Werte.
+Das berührt den Kern-Datenfluss (`ensureDraft`/`lastLog`/`saveWorkout` gehen aktuell
+alle implizit von „heute" aus) — vermutlich lohnt sich am Anfang der nächsten Session
+kurz zu klären, wie Datumsauswahl und rückwirkendes Bearbeiten zusammenhängen sollen
+(eigene Ansicht vs. Erweiterung der Hauptseite), bevor Code entsteht.
+
+**C) Verlauf-Seite neu: Pläne oben, Charts + Filter darunter.** Aktuell ist „Verlauf"
+eine eigene, nur über das Menü erreichbare Ansicht (`viewHistory()`,
+[app.js:412](js/app.js:412)) mit einer flachen, nach Monat gruppierten Liste
+gespeicherter Einheiten — Tippen öffnet die Lese-Detailansicht (s.o.). Der Nutzer
+will stattdessen: Plan-/Gewichtsübersicht bleibt oben, **darunter** ein Verlaufs-
+Bereich, der direkt die **Fortschritts-Charts pro Übung** zeigt (dieselbe
+`Chart.line()`-Komponente, die aktuell nur beim Aufklappen einer einzelnen Übungszeile
+erscheint, siehe `historyBox()`), dazu Filter: „letzte 10 Trainingseinheiten" sowie
+Zeitraum gesamt / 12 / 6 / 2 / 1 Monate. Größte strukturelle Änderung der drei — vor
+dem Umsetzen klären, ob das eine neue, eigenständige Sektion auf der Hauptseite wird
+oder die bisherige „Verlauf"-Ansicht ersetzt, und ob alle Übungen gleichzeitig eine
+Karte bekommen oder es eine Auswahl gibt.
