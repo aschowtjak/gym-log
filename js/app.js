@@ -54,6 +54,7 @@ async function init() {
   S.plans = await DB.all('plans');
   S.workouts = (await DB.all('workouts')).sort(byDateDesc);
 
+  await ensureMigration();
   await ensureSeed();
   await ensureDemo();
 
@@ -102,6 +103,35 @@ async function ensureSeed() {
   }
 
   await DB.put('meta', { key: 'seed', value: SEED_VERSION });
+}
+
+/* Einmaliger Nachzieh-Schritt für Bestandsinstallationen: ensureSeed() legt Übungen/Pläne nur
+   an, rührt aber nie an bereits vorhandenen (sonst würden eigene Planänderungen überschrieben).
+   Diese Migration bringt Namen/Block-Codes/Sätze auf den 22.09.-Stand, OHNE eigene Ergänzungen
+   des Nutzers (z.B. selbst hinzugefügte Übungen) anzutasten: nur Positionen, die exakt einer
+   Zeile aus SEED_PLANS entsprechen (per Übungsname im selben Plan), werden aktualisiert. */
+async function ensureMigration() {
+  const rec = await DB.get('meta', 'migration');
+  if (rec && rec.value >= 1) return;
+
+  const renameEx = { 'Beinpresse einbeinig (≤90°)': 'Beinpresse einbeinig', 'Kabel-Außenrotation (90/90)': 'Kabel-Außenrotation' };
+  for (const e of S.exercises) {
+    if (renameEx[e.name]) { e.name = renameEx[e.name]; await DB.put('exercises', e); }
+  }
+
+  const renamePlan = { 'Tag A': 'Trainingseinheit 1', 'Tag B': 'Trainingseinheit 2' };
+  for (const p of S.plans) {
+    if (renamePlan[p.name]) p.name = renamePlan[p.name];
+    const seedRows = ((SEED_PLANS.find((sp) => sp[0] === p.name) || [])[1]) || [];
+    p.items.forEach((it) => {
+      const row = seedRows.find((r) => r[1] === exName(it.exerciseId));
+      if (!row) return;
+      it.block = row[0]; it.targetSets = row[2]; it.targetReps = row[3]; it.hint = row[4];
+    });
+    await DB.put('plans', p);
+  }
+
+  await DB.put('meta', { key: 'migration', value: 1 });
 }
 
 /* Fiktive Trainingshistorie anlegen - nur beim allerersten Start, nie erneut
@@ -233,8 +263,10 @@ function viewMain() {
     else last.items.push(it);
   });
   groups.forEach((grp) => {
-    h += '<div class="blk-card"><div class="blk-h">' + esc(grpLabel(grp.key)) + '</div>';
-    grp.items.forEach((it) => { h += planRow(plan, it); });
+    const sets = grp.items[0] && grp.items[0].targetSets;
+    h += '<div class="blk-card"><div class="blk-h"><span class="t">' + esc(grpLabel(grp.key)) + '</span>' +
+      (sets ? '<span class="n">· ' + esc(sets) + ' Sätze</span>' : '') + '</div>';
+    grp.items.forEach((it, i) => { if (i) h += '<div class="ex-div"></div>'; h += planRow(plan, it); });
     h += '</div>';
   });
 
@@ -263,31 +295,31 @@ function planRow(plan, it) {
   const prev = tracked ? lastLog(exId, plan.id) : null;
   const up = tracked && prev && prev.done && prev.weight > 0;
 
-  let h = '<div class="ex-item"><div class="ex-top">' +
-    '<div class="ex-left"' + (tracked ? ' data-action="toggle-hist" data-id="' + exId + '"' : '') + '>' +
-    '<div class="ex-name">' + esc(exName(exId)) +
-    (tracked ? '<span class="chev-ico' + (isOpen ? ' on' : '') + '">›</span>' : '') + '</div>' +
-    '<div class="ex-sets">' + esc((it.targetSets || '?') + ' × ' + (it.targetReps || '?')) + '</div>' +
-    (it.hint ? '<div class="ex-hint">' + esc(it.hint) + '</div>' : '') +
+  let h = '<div class="nm"' + (tracked ? ' data-action="toggle-hist" data-id="' + exId + '"' : '') + '>' +
+    '<b>' + esc(exName(exId)) +
+    (tracked ? '<span class="chev-ico' + (isOpen ? ' on' : '') + '">›</span>' : '') + '</b>' +
+    (it.hint ? '<span>' + esc(it.hint) + '</span>' : '') +
     '</div>';
 
-  if (tracked) {
-    h += '<div class="ex-weight"><div class="wrow">' +
-      '<div class="winp"><input type="text" inputmode="decimal" data-in="weight" data-plan="' + plan.id + '" data-id="' + exId + '" ' +
-      'value="' + esc(d.weight) + '" placeholder="–"><span class="unit">' + UNITS[unit] + '</span></div>' +
-      (up ? '<span class="up-badge">↑</span>' : '') +
-      '</div></div>';
-  }
-  h += '</div>';
-
-  if (tracked) {
-    h += '<label class="chk"><input type="checkbox" data-in="done" data-plan="' + plan.id + '" data-id="' + exId + '"' +
-      (d.done ? ' checked' : '') + '><span>alles geschafft</span></label>';
+  if (!tracked) {
+    h += '<div class="bc"></div><div class="reps-plain">' + esc(it.targetReps || '') + '</div>';
+  } else {
+    const cid = 'chk-' + plan.id + '-' + exId;
+    const prefix = unit === 'kg' && it.targetReps ? esc(it.targetReps) + ' ×' : '';
+    h += '<div class="bc">' + (up ? '<span class="up-badge">↑</span>' : '') + '</div>' +
+      '<div class="fp">' +
+      '<input type="checkbox" class="vh" id="' + cid + '" data-in="done" data-plan="' + plan.id + '" data-id="' + exId + '"' +
+      (d.done ? ' checked' : '') + '>' +
+      '<div class="fp-main"><span class="x">' + prefix + '</span>' +
+      '<span class="fp-valwrap"><input type="text" inputmode="decimal" data-in="weight" data-plan="' + plan.id + '" data-id="' + exId + '" ' +
+      'value="' + esc(d.weight) + '" placeholder="–"><span class="unit">' + UNITS[unit] + '</span></span></div>' +
+      '<label for="' + cid + '" class="fp-tgl"><svg viewBox="0 0 24 24"><path d="M12 19V5M6 11l6-6 6 6"/></svg></label>' +
+      '</div>';
   }
 
   if (isOpen) h += historyBox(exId, plan.id, unit);
 
-  return h + '</div>';
+  return h;
 }
 
 function historyBox(exId, planId, unit) {

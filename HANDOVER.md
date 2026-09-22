@@ -2,15 +2,17 @@
 
 Stand: 22.09.2026, nach dem Rückbau auf eine Seite, einer Feedback-Runde aus dem echten
 Betrieb (Deployment, Nutzung am Handy), einer zweiten Runde mit Layout-Umbau + neuen
-Features und einer dritten Runde mit der finalen Optik der Block-Karten + neuem Haken
-(siehe Abschnitt 7). Keine offene Design-Aufgabe mehr, `PROMPT.md` ist historisch.
+Features und einer dritten Runde mit der finalen Optik der Block-Karten, dem
+Zeilen-Layout (Pille + integrierter Pfeil-Haken) und einer Umbenennung/Vereinheitlichung
+der Pläne (siehe Abschnitt 7). Keine offene Design-Aufgabe mehr, `PROMPT.md` ist historisch.
 
 **⚠️ Offener Pull Request, noch nicht gemerged:**
 [github.com/aschowtjak/gym-log/pull/1](https://github.com/aschowtjak/gym-log/pull/1)
 (Branch `block-cards-and-stopwatch` → `master`). Enthält die strukturelle Umstellung auf
 Block-Karten, die Finisher→Block-C-Zusammenlegung, den `nextBlock()`-Bugfix, die
-Stoppuhr und (dritte Runde) die finale Optik der Block-Karten samt neuem Haken. Solange
-der PR offen ist, weiterhin auf **diesem Branch** committen und pushen (nicht auf
+Stoppuhr und (dritte Runde) die finale Optik der Block-Karten samt Zeilen-Layout,
+Umbenennung „Tag A/B" → „Trainingseinheit 1/2" und einer Migration für Bestandsdaten.
+Solange der PR offen ist, weiterhin auf **diesem Branch** committen und pushen (nicht auf
 `master`), damit alles im selben PR landet:
 ```
 git checkout block-cards-and-stopwatch   # falls nicht schon aktiv
@@ -48,7 +50,7 @@ Einzelsätze.
 index.html               App-Shell: Topbar, Container, Speichern-Leiste, Modal
 css/style.css             gesamtes Design, CSS-Variablen, Dark Theme
 js/db.js                  IndexedDB-Wrapper: open/all/get/put/del/clear/putAll
-js/seed.js                Übungskatalog, Pläne Tag A / Tag B, Demodaten-Rezept
+js/seed.js                Übungskatalog, Pläne Trainingseinheit 1 / 2, Demodaten-Rezept
 js/chart.js                abhängigkeitsfreies SVG-Liniendiagramm (Chart.line)
 js/app.js                  State, Views, Speicherlogik, Events
 manifest.webmanifest      PWA-Manifest
@@ -92,25 +94,37 @@ Nutzerwunsch aus der ersten Feedback-Runde.
 letztere beide nur über das Zahnrad-Menü erreichbar. Kein Tabbar.
 
 - **Tagesumschalter** (`.daybar`) oben: ein Button pro Plan (`S.plans`), erwartet genau
-  zwei Pläne (Tag A / Tag B). `S.day` hält die aktuell gewählte `planId`.
+  zwei Pläne (Trainingseinheit 1 / 2, bis 22.09. „Tag A/B"). `S.day` hält die aktuell
+  gewählte `planId`.
 - **Datums-/Kontextzeile** (`.daymeta`) direkt darunter: heutiges Datum ausgeschrieben
   (`fmtFullDate`) plus, je nach Zustand, „heute bereits gespeichert (erneutes Speichern
   überschreibt)", „zuletzt <Datum>" oder „noch nie trainiert". Zweck: sofort erkennbar,
   dass eine neue, datierte Einheit begonnen wird, und was beim Speichern passiert.
-- **Plan-/Gewichtsübersicht — eine Karte pro Block** (`.blk-card`, seit dem Layout-Umbau
-  vom 21.09.): keine Tabelle mehr. `viewMain()` fasst aufeinanderfolgende Plan-Positionen
-  mit demselben Blockbuchstaben (`grpKey()`/`grpLabel()`, z.B. „A1"/„A2"/„A3" → Gruppe „A"
-  → Überschrift „Block A") zu einer eigenen umrandeten Karte zusammen. Innerhalb einer
-  Karte ist jede Übung ein `.ex-item`, getrennt nur durch eine dünne Linie
-  (`.ex-item + .ex-item{border-top}`), **keine Nummerierung**. Pro Übung: links
-  `.ex-left` gestapelt (Name mit Chevron `.chev-ico` → Sätze × Wdh. → Hinweis, dezent),
-  rechts `.ex-weight` **rechtsbündig** (Gewichtsfeld + ↑-Marker), darunter der Haken
-  „alles geschafft". `.ex-left` trägt `data-action="toggle-hist"` — **nur** dieser Bereich
-  ist tippbar für die Historie, Gewichtsfeld/Haken lösen bewusst nichts aus (eigenes
-  Element, kein Event-Bubbling-Problem). Bei aufgeklappter Historie hängt `historyBox()`
-  (Kurve + Liste) direkt unter dem Haken im selben `.ex-item`.
-  „Finisher" gibt es seit dieser Runde nicht mehr als eigene Gruppe — beide Pläne haben
-  ihn testweise als „C3" in Block C integriert (`js/seed.js`, `SEED_PLANS`).
+- **Plan-/Gewichtsübersicht — eine Karte pro Block, ein einziges CSS-Grid** (`.blk-card`,
+  finale Optik vom 22.09.): `viewMain()` fasst aufeinanderfolgende Plan-Positionen mit
+  demselben Blockbuchstaben (`grpKey()`/`grpLabel()`) zu einer Karte zusammen; die
+  Überschrift zeigt jetzt auch die Sätze („Block A · 3 Sätze" — genommen vom ersten
+  Item der Gruppe, Sätze sind seit dieser Runde je Block einheitlich, siehe Abschnitt 7).
+  `.blk-card` selbst ist `display:grid;grid-template-columns:1fr auto auto` (Name |
+  ↑-Badge | Pille) — **eine** Grid-Spaltenstruktur für die ganze Karte, dadurch sind
+  Badges und Pillen über alle Zeilen hinweg automatisch spaltenbündig (Grid berechnet
+  pro Spalte die Breite des breitesten Inhalts), ganz ohne feste Pixelwerte. Trenner
+  zwischen Übungen sind eigene `<div class="ex-div">`-Elemente (`grid-column:1/-1`),
+  **keine** CSS-Sibling-Regel mehr wie früher (`.ex-item + .ex-item`), weil die Übungen
+  keine gemeinsamen Wrapper-Divs mehr haben, sondern direkte Grid-Kinder sind.
+  Pro Übung: `.nm` (Name fett + Chevron `.chev-ico`, Hinweis darunter dezent) — trägt
+  `data-action="toggle-hist"`, **nur** dieser Bereich ist tippbar für die Historie.
+  `.bc` ist die Badge-Spalte (↑, falls letztes Mal geschafft — leer sonst, verschiebt
+  dadurch nie die Pille daneben). Bei Übungen mit Gewicht folgt `.fp` — Wiederholungen ×
+  Gewicht **und** der Haken als **ein** Bauteil: `.fp-main` zeigt Wdh. als Text + das
+  editierbare Gewichtsfeld (`data-in="weight"`, unverändert) + Einheit, `.fp-tgl` ist der
+  Haken, per senkrechtem Strich abgetrennt (nur der Pfeil, kein Text mehr — siehe
+  Abschnitt 7). Übungen ohne Gewicht (`unit:'x'`) zeigen statt `.fp` nur `.reps-plain`
+  (reiner Text, nicht fett, gleiche Größe wie die Wdh.-Angabe in der Pille). Bei
+  aufgeklappter Historie hängt `historyBox()` (Kurve + Liste, `grid-column:1/-1`) direkt
+  unter der jeweiligen Übung im selben Grid.
+  „Finisher" gibt es seit der zweiten Runde nicht mehr als eigene Gruppe — beide Pläne
+  haben ihn als „C3" in Block C integriert (`js/seed.js`, `SEED_PLANS`).
 - **Speichern-Leiste** (`#savebar`, fixiert unten) ersetzt die alte Tabbar/Restbar.
 - **Stoppuhr** (seit 21.09., zweite Runde): Icon im Topbar neben dem Zahnrad
   (`data-action="stopwatch"`), von jeder Seite aus erreichbar — nicht an eine bestimmte
@@ -150,15 +164,32 @@ letztere beide nur über das Zahnrad-Menü erreichbar. Kein Tabbar.
   der letzte Eintrag einen nicht passenden Blockcode hatte (genau der Fall war „Finisher"
   am Planende — mit ausgelöst durch den Nutzer-Bugreport, dass neu hinzugefügte Übungen
   „nicht im richtigen Block" landeten).
+- `ensureMigration()` (neu, 22.09.) — einmaliger Nachzieh-Schritt für Bestandsinstallationen,
+  läuft in `init()` **vor** `ensureSeed()` (wichtig, siehe unten). `ensureSeed()` legt
+  Übungen/Pläne nur an, rührt aber nie an bereits vorhandenen — das ist Absicht (sonst
+  würden eigene Planänderungen überschrieben), heißt aber auch: Namens-/Block-/Sätze-
+  Änderungen an `SEED_PLANS`/`SEED_EXERCISES` erreichen Bestandsnutzer nie von selbst.
+  `ensureMigration()` benennt bekannte alte Übungsnamen um (`renameEx`-Map, z.B.
+  „Beinpresse einbeinig (≤90°)" → „Beinpresse einbeinig"), benennt `Tag A`/`Tag B` zu
+  `Trainingseinheit 1`/`Trainingseinheit 2` um und gleicht danach pro Plan-Item
+  `block`/`targetSets`/`targetReps`/`hint` mit der passenden `SEED_PLANS`-Zeile ab
+  (**nur** wenn der Übungsname exakt matcht — eigene Ergänzungen des Nutzers, die in
+  keiner `SEED_PLANS`-Zeile vorkommen, bleiben unangetastet). Gate über `meta.migration`,
+  läuft nur einmal. **Reihenfolge ist kritisch:** liefe `ensureSeed()` zuerst, würde es
+  für jeden Bestandsnutzer mit noch „Tag A/B" benannten Plänen zusätzlich frische
+  „Trainingseinheit 1/2"-Pläne anlegen (Namen matchen ja noch nicht) — Duplikate. Beim
+  Testen dieser Migration unbedingt eine **komplett leere** IndexedDB simulieren
+  (`indexedDB.deleteDatabase('gymlog')`, promise-verpackt, siehe Abschnitt 6) und danach
+  von Hand alte Datensätze reinschreiben, sonst testet man nur den Neuinstallations-Pfad.
 
 ---
 
 ## 4. Demodaten
 
 `js/seed.js` enthält `DEMO_PROGRESSIONS` (Startgewicht, Schrittweite, `done`-Verlauf pro
-Übung und Tag) und `DEMO_DAYS_AGO` (Zeitpunkte der acht Einheiten, alternierend Tag A/B,
-über die letzten 42 Tage). `buildDemoWorkouts()` in `js/app.js` rechnet daraus konkrete
-Workouts: das Gewicht einer Einheit ist immer „vorheriges Gewicht + Schrittweite, falls
+Übung und Trainingseinheit) und `DEMO_DAYS_AGO` (Zeitpunkte der acht Einheiten,
+alternierend Einheit 1/2, über die letzten 42 Tage). `buildDemoWorkouts()` in
+`js/app.js` rechnet daraus konkrete Workouts: das Gewicht einer Einheit ist immer „vorheriges Gewicht + Schrittweite, falls
 die vorherige Einheit `done: true` war, sonst unverändert" — dieselbe Logik, die auch
 die App selbst für den ↑-Marker verwendet, nur einmalig vorgerechnet.
 
@@ -169,22 +200,22 @@ löschen" leert auch diesen Meta-Key mit, die App startet beim nächsten Laden a
 im ursprünglichen Vorführzustand.
 
 Getestet: alle acht Demo-Einheiten zeigen plausible, steigende Gewichte, drei Einträge
-sind bewusst `done: false` (Latzug/Seated Leg Curl in Tag A, Ruderzug in Tag B), die
-jeweils letzte Einheit pro Tag ist überall `done: true` — direkt nach dem ersten Öffnen
-sind also sowohl vorbelegte Gewichte als auch ↑-Marker sichtbar, und jede Übung hat eine
-Kurve mit vier Punkten.
+sind bewusst `done: false` (Latzug/Seated Leg Curl in Einheit 1, Ruderzug in Einheit 2),
+die jeweils letzte Einheit pro Trainingstag ist überall `done: true` — direkt nach dem
+ersten Öffnen sind also sowohl vorbelegte Gewichte als auch ↑-Marker sichtbar, und jede
+Übung hat eine Kurve mit vier Punkten.
 
 ---
 
-## 5. Fachliche Festlegungen (unverändert von der letzten Übergabe)
+## 5. Fachliche Festlegungen (inhaltlich unverändert, nur Namen aktualisiert)
 
-1. **Tag A und Tag B sind strikt getrennt.** Historie und Vorbelegung immer über
+1. **Trainingseinheit 1 und 2 sind strikt getrennt.** Historie und Vorbelegung immer über
    `planId + exerciseId`. Betrifft Hip Thrust Maschine, Seated Leg Curl,
-   Beinpresse einbeinig — im Test zeigen beide Tage tatsächlich unterschiedliche
+   Beinpresse einbeinig — im Test zeigen beide Einheiten tatsächlich unterschiedliche
    Gewichte für dieselbe Übung.
 2. **Nur Übungen mit Zusatzgewicht werden protokolliert.** Band Pull-Aparts, Dead Bugs
-   (Tag A), Side Plank, Hyperextensions (Tag B) — `unit === 'x'` bzw. `'s'` bei Side
-   Plank, in beiden Fällen ohne Eingabefeld/Haken in der Tabelle.
+   (Einheit 1), Side Plank, Hyperextensions (Einheit 2) — `unit === 'x'` bzw. `'s'` bei
+   Side Plank, in beiden Fällen ohne Eingabefeld/Haken, nur `.reps-plain`-Text.
 3. **Kein automatisches Hochrechnen.** Die Vorgabe im Eingabefeld ist immer exakt das
    letzte Gewicht; der ↑-Marker ist nur ein Hinweis, keine Berechnung.
 4. **Speichern loggt immer die ganze Einheit** (seit der Feedback-Runde vom 21.09., löst
@@ -208,7 +239,7 @@ Kurve mit vier Punkten.
   const rs = await navigator.serviceWorker.getRegistrations(); for (const r of rs) await r.unregister();
   const ks = await caches.keys(); for (const k of ks) await caches.delete(k); location.reload();
   ```
-  Für ausgelieferte Updates `const CACHE = 'gymlog-v7'` hochzählen (aktuell v7).
+  Für ausgelieferte Updates `const CACHE = 'gymlog-v8'` hochzählen (aktuell v8).
 - **Zielgerät Pixel 7a/8:** im Browser-Pane mit `resize_window` auf 412 × 915 testen
   (CSS-Pixel-Viewport beider Geräte in Chrome, DPR 2.625), nicht mehr 375 × 812
   (iPhone-Maß aus dem ersten Umbau). Das Layout ist fluid und braucht dafür keine
@@ -232,10 +263,37 @@ Kurve mit vier Punkten.
   über den Klick auf den Button.
 - **Datum:** `todayISO()` rechnet die Zeitzone heraus, `tsOf()` hängt `T12:00:00` an,
   damit Sommerzeit keine Tagessprünge erzeugt. Beibehalten.
+- **`<script src>` ohne Charset kann als Latin-1 statt UTF-8 dekodiert werden.** Pythons
+  `http.server` sendet für `.js`-Dateien `Content-Type: text/javascript` **ohne**
+  `charset`-Parameter. Laut Spec sollte der Browser dann die Dokument-Kodierung erben
+  (`<meta charset="utf-8">`), das griff im Browser-Pane dieser Session aber nicht
+  zuverlässig — Sonderzeichen (ä/ü/ß/≤/°/–) kamen als Mojibake zurück (`Ã¤` statt `ä`),
+  **inklusive** unsichtbarer Folgefehler: ein String-Vergleich in `ensureMigration()`
+  gegen einen mojibake'd geladenen Text schlug lautlos fehl. Fix (22.09., committet):
+  `charset="utf-8"` explizit auf jedem `<script src>`-Tag in `index.html` plus
+  `@charset "UTF-8";` als erste Zeile in `css/style.css`. Seitdem sauber. Falls je wieder
+  Sonderzeichen komisch aussehen: zuerst hier nachsehen, nicht an der eigenen Encoding-
+  Vermutung zweifeln.
+- **Browser-Pane cacht Ressourcen teils hartnäckig, quer zu `cache:'no-store'`.** In
+  dieser Session lieferte derselbe Server-Prozess (auch nach Neustart, auch in neuem Tab)
+  für dieselbe URL mal alten, mal neuen Datei-Inhalt — sogar `fetch(url,{cache:'no-store'})`
+  bekam manchmal Alt-Content. Robuster Workaround beim Testen von Code-Änderungen:
+  **immer** einen Cache-Buster an die HTML-Dokument-URL selbst hängen, nicht nur an
+  referenzierte `<script>`/`<link>`-Pfade (`index.html?nav=<eindeutig>` reicht, Query wird
+  vom Server ignoriert, erzwingt aber eine echte Neuabfrage). Ohne das kann eine
+  „frische" Testseite trotzdem ein Alt-`index.html` mit alten Query-Strings in seinen
+  eigenen `<script src>`-Tags ausliefern.
+- **`indexedDB.deleteDatabase()` ist kein Promise und kann lautlos blockieren.** Läuft
+  noch eine offene Verbindung auf derselben Seite (z.B. weil `init()` gerade `DB.open()`
+  aufgerufen hat), hängt der Request im `blocked`-Zustand, ohne Fehler zu werfen — ein
+  unverpacktes `indexedDB.deleteDatabase('gymlog')` liefert dann scheinbar sofort
+  zurück, hat aber nichts gelöscht. Richtig: Promise wrappen (`onsuccess`/`onblocked`/
+  `onerror`) **und** vorher auf eine Seite ohne offene DB-Verbindung navigieren (z.B.
+  `/manifest.webmanifest`, lädt kein `app.js`), sonst bleibt die Löschung blockiert.
 
 ---
 
-## 7. Design-Recherche & finale Optik der Block-Karten (umgesetzt, dritte Runde)
+## 7. Design-Recherche & finale Optik (umgesetzt, dritte Runde, mehrere Iterationen)
 
 Auf Nutzerwunsch online nach Design-Trends für Fitness-/Trainings-Apps recherchiert
 (Dribbble, Mobbin, GitHub-Themen „fitness-tracker", Bento-Grid-Trend 2026). Kernaussagen:
@@ -243,25 +301,59 @@ dunkle, fast schwarze Flächen (~#0B0B0F) mit **genau einer** kräftigen Akzentf
 **große Zahlen** für Live-Werte, **Bento-Grid-Sektionen** (abgegrenzte Kacheln, 12–24px
 Radius) — deckt sich mit dem Block-Karten-Layout.
 
-Drei ausgearbeitete Richtungen wurden als Vergleichs-Mockup gegenübergestellt (Artifact
-https://claude.ai/artifact/DEPd9BAV6CWV5CZYDK12Er, privat): **Bento Minimal**
-(größerer Radius, Akzentfarbe pro Block), **High-Contrast Numeric** (sehr große
-Gewichtszahl als visueller Fokus, Rest gedämpft) und **Soft Depth** (weicher Schatten
-statt harter Kante, heller Karten-Verlauf, großer Radius, einfarbig). Der Nutzer hat sich
-für **Soft Depth als Basis** entschieden, kombiniert mit der Zahlengröße/-hierarchie aus
-**High-Contrast Numeric** (Gewicht groß und optisch im Fokus, Name/Sätze/Hinweis
-gedämpft) — umgesetzt in `css/style.css` (`.blk-card`, `.blk-h`, `.ex-name`, `.ex-sets`,
-`.ex-hint`, `.winp input`, `.up-badge`). Keine neuen CSS-Variablen für Block-Akzentfarben
-nötig, da einfarbig (weiterhin `--acc2`) — Richtung „Bento Minimal" (Akzentfarbe pro
-Block) wurde **nicht** übernommen.
+**Karten-Optik:** Drei Richtungen als Vergleichs-Mockup gegenübergestellt (Artifact
+https://claude.ai/artifact/DEPd9BAV6CWV5CZYDK12Er, privat): Bento Minimal (Akzentfarbe
+pro Block), High-Contrast Numeric (sehr große Gewichtszahl, Rest gedämpft) und Soft
+Depth (weicher Schatten, heller Verlauf, großer Radius, einfarbig). Entscheidung: **Soft
+Depth als Basis**, kombiniert mit der Zahlenhierarchie aus High-Contrast Numeric —
+einfarbig geblieben (weiterhin `--acc2`), keine Akzentfarbe pro Block.
 
-Der „alles geschafft"-Haken gefiel dem Nutzer optisch nicht (zu steril). Umgesetzt: der
-native Checkbox-Input bleibt (keine neue Logik/Markup nötig), ist aber per CSS
-(`appearance:none` + `::after`) als abgerundetes Quadrat gestaltet, das beim Ankreuzen
-grün wird und einen weißen Haken einblendet, dazu eine kurze Pop-Animation
-(`chk-pop`) — Wunsch des Nutzers nach einem „leeren Kästchen, das beim Anklicken grün
-wird" statt der alten sterilen Browser-Checkbox. Pill-Button und Gedrückthalten-Variante
-wurden nicht umgesetzt (nicht gewünscht).
+**Zeilen-Layout:** Ursprünglich Name+Hinweis/Sätze links, Gewicht rechts, Haken als
+eigene Zeile darunter — dem Nutzer zu gequetscht und nicht spaltenbündig (unterschiedlich
+breite Elemente je Zeile). Mehrere Iterationen (Artifact
+https://claude.ai/artifact/FFhQNS3eiCGeZXfRKwRE2S, privat, 6 Versionen durchlaufen) bis
+zur finalen Form:
+- Sätze wandern aus der Zeile in die Block-Überschrift („Block A · 3 Sätze") — dafür
+  müssen Sätze **innerhalb eines Blocks einheitlich** sein; Ausreißer wurden auf Wunsch
+  des Nutzers vereinheitlicht (Beinpresse einbeinig 4→3, Hip Thrust 4→3, Seated Leg Curl
+  2–3→3, Hyperextensions 2–3→3, siehe `SEED_PLANS`).
+  Wiederholungen und Gewicht zu einer Pille kombiniert („5–8 × 57,5 kg"), nur die
+  Gewichtszahl ist ein echtes `<input>`, Wdh./Einheit sind Text.
+- Der Haken ist jetzt **in** der Pille integriert, per senkrechtem Strich abgetrennt
+  (`.fp-tgl`, eigenes Bauteil mit gemeinsamem Rahmen) — keine eigene Zeile mehr.
+- **Ganze Karte ist ein CSS-Grid** (`.blk-card{display:grid;grid-template-columns:1fr
+  auto auto}`), nicht mehr Flex pro Zeile — dadurch sind Badge- und Pillen-Spalte über
+  alle Zeilen einer Karte automatisch gleich breit (Grid nimmt die Breite des breitesten
+  Inhalts je Spalte), ohne feste Pixelwerte. Der ↑-Badge (letztes Mal geschafft) hat eine
+  eigene Spalte **vor** der Pille, verschiebt sie dadurch nie, ob vorhanden oder nicht.
+- Exemplarisch bei ungetrackten Übungen (kein Gewicht, z.B. Band Pull-Aparts) geprüft:
+  Entscheidung „ohne Pille" — nur Text, nicht fett wie ein Wert, sondern **gleiche
+  Schriftgröße/-farbe wie die Wdh.-Angabe** in den Pillen der anderen Zeilen (12,5px,
+  gedämpft) — macht optisch klar, dass hier nichts editierbar ist. Der Übungsname selbst
+  bleibt fett wie überall.
+- Mehr Innenabstand pro Übung (13px → 17px) auf Wunsch, wirkte vorher zu eng.
+- Wording des Hakens: **nur ein Pfeil-Icon** (↑), kein Text mehr — der Pfeil ist dieselbe
+  Metapher wie der bestehende ↑-Badge, spart Platz in der schmalen Pille. Fachlich
+  bedeutet der Haken weiterhin nur „soll das Gewicht beim nächsten Mal steigen" (`done`
+  im Datenmodell, unverändert).
+- Exemplarisch geprüft, dass der Pop-Effekt beim Antippen (Größenänderung per
+  `transform:scale`) nichts verschiebt: Animation betrifft nur die Skalierung, kein
+  Reflow, plus genug `gap` zu Nachbarelementen — dafür extra als echte, klickbare
+  Checkbox im Mockup gebaut statt nur statisch gezeigt.
+
+**Weitere Inhalts-Anpassungen (auf Wunsch, zusammen mit dem Layout):**
+- „Tag A"/„Tag B" → „Trainingseinheit 1"/„Trainingseinheit 2".
+- „Beinpresse einbeinig (≤90°)" → Name „Beinpresse einbeinig", `≤90°` wandert in den
+  Hinweistext. Gleiches Prinzip bei „Kabel-Außenrotation (90/90)" → Hinweis „90/90, …"
+  (nicht explizit vom Nutzer genannt, aber dieselbe Systematik — Winkel-/ROM-Angaben in
+  Klammern raus aus dem Namen, rein in den Hinweis; Geräte-/Ausrüstungs-Kürzel wie
+  „(Maschine)", „(KH)" bleiben im Namen, da Teil der Identifikation, kein Zusatzhinweis).
+
+**Migration für Bestandsinstallationen:** Da `ensureSeed()` nie an vorhandenen Plänen/
+Übungen rührt, würden diese Änderungen bei bereits laufenden Installationen (wie der des
+Nutzers, die noch „Tag A/B" mit separatem „Finisher"-Block und einer selbst
+hinzugefügten Übung hatte) nie ankommen. `ensureMigration()` (siehe Abschnitt 3) holt das
+einmalig nach, ohne eigene Ergänzungen des Nutzers anzufassen.
 
 ---
 

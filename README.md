@@ -16,12 +16,14 @@ Schrittweite vor.
 
 ## Eine Seite
 
-- Oben ein Umschalter **Tag A / Tag B** — mehr Pläne gibt es nicht. Darunter das
-  heutige Datum plus ein kurzer Hinweis, ob dieser Tag heute schon gespeichert wurde.
-- Darunter je Block (A/B/C) eine eigene Karte mit seinen Übungen: Name, Sätze × Wdh.
-  und ein Gewichtsfeld, vorbelegt mit dem Gewicht der letzten Einheit und mit **↑**
-  markiert, wenn letztes Mal alles geschafft wurde. Darunter der Haken „alles
-  geschafft" für heute.
+- Oben ein Umschalter **Trainingseinheit 1 / 2** — mehr Pläne gibt es nicht. Darunter
+  das heutige Datum plus ein kurzer Hinweis, ob dieser Tag heute schon gespeichert wurde.
+- Darunter je Block (A/B/C) eine eigene Karte mit ihren Übungen, Sätze stehen einmal
+  in der Block-Überschrift („Block A · 3 Sätze"). Pro Übung: Name (+ Hinweistext),
+  daneben eine Pille mit Wiederholungen × Gewicht (nur die Zahl ist editierbar) und
+  ein Pfeil-Haken direkt in der Pille — antippen markiert „nächstes Mal steigern",
+  füllt sich grün. Der zweite, gedämpfte Pfeil links davon (falls vorhanden) zeigt,
+  dass letztes Mal schon alles geschafft war.
 - Tippen auf eine Übungszeile (erkennbar am **›**) klappt ihre Historie auf: letzte
   Einheiten als Liste plus Fortschrittskurve.
 - Unten ein Knopf **„Einheit speichern"** — übernimmt alle angezeigten Gewichte als
@@ -31,9 +33,10 @@ Schrittweite vor.
   Details inkl. Löschen), Plan bearbeiten, Backup und Demodaten löschen.
 
 **Nur Übungen mit Zusatzgewicht werden protokolliert.** Band Pull-Aparts, Dead Bugs,
-Side Plank und Hyperextensions stehen im Plan, haben aber kein Eingabefeld.
-**Tag A und Tag B sind strikt getrennt** — dieselbe Übung (z.B. Hip Thrust Maschine)
-hat an beiden Tagen ein eigenes Arbeitsgewicht und eine eigene Historie.
+Side Plank und Hyperextensions stehen im Plan, haben aber kein Eingabefeld — nur die
+Wiederholungszahl als Text, gleiche Stelle wie die Pille bei den anderen Übungen.
+**Trainingseinheit 1 und 2 sind strikt getrennt** — dieselbe Übung (z.B. Hip Thrust
+Maschine) hat in beiden Einheiten ein eigenes Arbeitsgewicht und eine eigene Historie.
 Nur Übungen ganz ohne Gewicht (keine Historie, nichts eingetragen) und ohne Haken
 werden nicht gespeichert.
 
@@ -95,7 +98,7 @@ Löschen der Browserdaten bzw. Deinstallieren der App löscht auch die Trainings
 index.html               App-Shell (Topbar, Container, Speichern-Leiste, Modal)
 css/style.css             komplettes Design, Dark Theme
 js/db.js                  IndexedDB-Wrapper (exercises, plans, workouts, meta)
-js/seed.js                Übungskatalog, Pläne Tag A / Tag B, Demodaten-Rezept
+js/seed.js                Übungskatalog, Pläne Trainingseinheit 1 / 2, Demodaten-Rezept
 js/chart.js                abhängigkeitsfreies SVG-Liniendiagramm
 js/app.js                  State, Views, Speicherlogik
 manifest.webmanifest      PWA-Manifest (Name, Icons, Standalone-Modus)
@@ -110,4 +113,4 @@ Keine Build-Schritte, keine Abhängigkeiten — Dateien ändern, neu laden, fert
 Der Service Worker liefert die gecachte Version sofort aus und lädt die neue im
 Hintergrund (stale-while-revalidate): Nach einem Deploy ist die Änderung beim
 übernächsten Start aktiv. Soll sie sofort greifen, in `sw.js` die Zeile
-`const CACHE = 'gymlog-v7'` (aktueller Stand) hochzählen.
+`const CACHE = 'gymlog-v8'` (aktueller Stand) hochzählen.
