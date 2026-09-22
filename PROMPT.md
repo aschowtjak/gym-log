@@ -11,11 +11,17 @@ deutschsprachig, Dark Theme, Mobile-First, Zielgerät Android/Pixel 7a/8). **Lie
 `HANDOVER.md`** — dort stehen Aufbau, Datenmodell, fachliche Festlegungen und
 Stolperfallen, insbesondere Abschnitt 7 („Design-Recherche & drei Richtungsvorschläge").
 
-**Wichtig:** Der aktuelle Stand in diesem Ordner ist **nicht gepusht** (nur lokal, siehe
-`git status`). Die live auf GitHub Pages laufende Version ist älter. In dieser Session
-geht es ausschließlich um **Design**, nicht um neue Funktionen — Struktur, Datenmodell
-und Features bleiben wie sie sind. Am Ende committen und pushen, wenn der Nutzer den
-neuen Look freigegeben hat, sonst alles lokal lassen (nicht von selbst pushen).
+**Wichtig:** Es gibt bereits einen offenen Pull Request —
+[github.com/aschowtjak/gym-log/pull/1](https://github.com/aschowtjak/gym-log/pull/1),
+Branch `block-cards-and-stopwatch` → `master`, noch nicht gemerged. Als Erstes auf diesen
+Branch wechseln (`git checkout block-cards-and-stopwatch`, ggf. vorher `git fetch`). Die
+live auf GitHub Pages laufende Version baut aus `master` und zeigt deshalb noch den
+Stand **vor** diesem PR. In dieser Session geht es ausschließlich um **Design**, nicht um
+neue Funktionen — Struktur, Datenmodell und Features bleiben wie sie sind. Änderungen als
+weitere Commits auf **demselben Branch** (`block-cards-and-stopwatch`) pushen, damit sie
+in PR #1 erscheinen — keinen neuen Branch/PR aufmachen, nicht auf `master` committen.
+Der PR bleibt offen, bis der Nutzer den fertigen Look freigibt (dann selbst mergen oder
+explizit darum bitten).
 
 ## Aufgabe
 
@@ -58,4 +64,5 @@ Geschmacksfrage, kein technisches Detail.
   Stoppuhr. Service-Worker-Cache vorher löschen (Code in HANDOVER Abschnitt 6), sonst
   testest du die alte Version. `sw.js`-`CACHE`-Version bei jeder Auslieferung hochzählen.
 - `README.md` und `HANDOVER.md` am Ende an den neuen Stand anpassen.
-- Erst committen/pushen, wenn der Nutzer das fertige Design abgenommen hat.
+- Commits gehen auf den Branch `block-cards-and-stopwatch` (PR #1), nicht auf `master`.
+  Den PR nicht selbst mergen, außer der Nutzer bittet ausdrücklich darum.

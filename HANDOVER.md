@@ -1,16 +1,25 @@
 # Übergabe: Gym Log
 
-Stand: 21.09.2026, nach dem Rückbau auf eine Seite, einer Feedback-Runde aus dem echten
-Betrieb (Deployment, Nutzung am Handy) und einer zweiten Runde mit Layout-Umbau + neuen
-Features. `PROMPT.md` enthält den Auftrag für die **nächste** Session (Design) — der
-ursprüngliche Umbau-Auftrag ist historisch, keine offene Aufgabe mehr.
+Stand: 22.09.2026, nach dem Rückbau auf eine Seite, einer Feedback-Runde aus dem echten
+Betrieb (Deployment, Nutzung am Handy), einer zweiten Runde mit Layout-Umbau + neuen
+Features und einer dritten Runde mit der finalen Optik der Block-Karten + neuem Haken
+(siehe Abschnitt 7). Keine offene Design-Aufgabe mehr, `PROMPT.md` ist historisch.
 
-**⚠️ Aktueller Stand ist NICHT gepusht.** Auf ausdrücklichen Wunsch des Nutzers liegen die
-Änderungen dieser Session nur lokal in `D:\Claude Code\Fitness App` (`git status` zeigt sie
-als „modified", nicht committed). Die live auf GitHub Pages laufende Version
-(https://aschowtjak.github.io/gym-log/) entspricht noch dem **vorherigen** Stand (ohne
-Block-Karten, ohne Stoppuhr, Finisher noch als eigener Block). Committen/pushen erst, wenn
-der Nutzer das Design final abgenommen hat — siehe `PROMPT.md`.
+**⚠️ Offener Pull Request, noch nicht gemerged:**
+[github.com/aschowtjak/gym-log/pull/1](https://github.com/aschowtjak/gym-log/pull/1)
+(Branch `block-cards-and-stopwatch` → `master`). Enthält die strukturelle Umstellung auf
+Block-Karten, die Finisher→Block-C-Zusammenlegung, den `nextBlock()`-Bugfix, die
+Stoppuhr und (dritte Runde) die finale Optik der Block-Karten samt neuem Haken. Solange
+der PR offen ist, weiterhin auf **diesem Branch** committen und pushen (nicht auf
+`master`), damit alles im selben PR landet:
+```
+git checkout block-cards-and-stopwatch   # falls nicht schon aktiv
+# Änderungen machen, committen
+git push
+```
+Die live auf GitHub Pages laufende Version (https://aschowtjak.github.io/gym-log/) baut
+aus `master` und zeigt bis zum Merge weiterhin den **vorherigen** Stand (ohne Block-Karten,
+ohne Stoppuhr, Finisher noch als eigener Block) — das ist normal und kein Fehler.
 
 ---
 
@@ -199,7 +208,7 @@ Kurve mit vier Punkten.
   const rs = await navigator.serviceWorker.getRegistrations(); for (const r of rs) await r.unregister();
   const ks = await caches.keys(); for (const k of ks) await caches.delete(k); location.reload();
   ```
-  Für ausgelieferte Updates `const CACHE = 'gymlog-v6'` hochzählen (aktuell v6).
+  Für ausgelieferte Updates `const CACHE = 'gymlog-v7'` hochzählen (aktuell v7).
 - **Zielgerät Pixel 7a/8:** im Browser-Pane mit `resize_window` auf 412 × 915 testen
   (CSS-Pixel-Viewport beider Geräte in Chrome, DPR 2.625), nicht mehr 375 × 812
   (iPhone-Maß aus dem ersten Umbau). Das Layout ist fluid und braucht dafür keine
@@ -226,46 +235,45 @@ Kurve mit vier Punkten.
 
 ---
 
-## 7. Design-Recherche & drei Richtungsvorschläge (offen für nächste Session)
+## 7. Design-Recherche & finale Optik der Block-Karten (umgesetzt, dritte Runde)
 
 Auf Nutzerwunsch online nach Design-Trends für Fitness-/Trainings-Apps recherchiert
 (Dribbble, Mobbin, GitHub-Themen „fitness-tracker", Bento-Grid-Trend 2026). Kernaussagen:
 dunkle, fast schwarze Flächen (~#0B0B0F) mit **genau einer** kräftigen Akzentfarbe,
 **große Zahlen** für Live-Werte, **Bento-Grid-Sektionen** (abgegrenzte Kacheln, 12–24px
-Radius) — deckt sich mit dem in dieser Session gebauten Block-Karten-Layout. Details und
-Quellen: siehe Chatverlauf dieser Session.
+Radius) — deckt sich mit dem Block-Karten-Layout.
 
-Drei ausgearbeitete Richtungen, rein auf CSS-Variablen der bestehenden App aufgesetzt
-(keine neue Schrift, keine Bibliothek):
+Drei ausgearbeitete Richtungen wurden als Vergleichs-Mockup gegenübergestellt (Artifact
+https://claude.ai/artifact/DEPd9BAV6CWV5CZYDK12Er, privat): **Bento Minimal**
+(größerer Radius, Akzentfarbe pro Block), **High-Contrast Numeric** (sehr große
+Gewichtszahl als visueller Fokus, Rest gedämpft) und **Soft Depth** (weicher Schatten
+statt harter Kante, heller Karten-Verlauf, großer Radius, einfarbig). Der Nutzer hat sich
+für **Soft Depth als Basis** entschieden, kombiniert mit der Zahlengröße/-hierarchie aus
+**High-Contrast Numeric** (Gewicht groß und optisch im Fokus, Name/Sätze/Hinweis
+gedämpft) — umgesetzt in `css/style.css` (`.blk-card`, `.blk-h`, `.ex-name`, `.ex-sets`,
+`.ex-hint`, `.winp input`, `.up-badge`). Keine neuen CSS-Variablen für Block-Akzentfarben
+nötig, da einfarbig (weiterhin `--acc2`) — Richtung „Bento Minimal" (Akzentfarbe pro
+Block) wurde **nicht** übernommen.
 
-1. **Bento Minimal** — größerer Karten-Radius (20px statt 14px), jeder Block (A/B/C)
-   bekommt eine eigene Akzentfarbe für die Überschrift (Blau/Violett/Grün) statt überall
-   dasselbe Blau.
-2. **High-Contrast Numeric** — Gewichtszahl wird sehr groß (~30px) und ist der visuelle
-   Fokus, Hinweistext verschwindet/wird kleiner, alles drumherum bewusst gedämpft.
-3. **Soft Depth** — weicher Schatten statt harter 1px-Kante um die Block-Karten, minimal
-   hellerer Verlauf im Kartenhintergrund, großer Radius (22px), einfarbig (kein
-   Regenbogen wie bei Richtung 1).
-
-Ein Vergleichs-Mockup aller drei (mit echtem Inhalt: Block A/B aus Tag A) liegt als
-Artifact vor: **https://claude.ai/artifact/DEPd9BAV6CWV5CZYDK12Er** (privat, nur für den
-Ersteller sichtbar). Der Nutzer hat sich in dieser Session noch **nicht** für eine
-Richtung entschieden — das ist die Aufgabe der nächsten Session, siehe `PROMPT.md`.
-
-Offener Punkt aus derselben Runde: der „alles geschafft"-Haken gefällt dem Nutzer optisch
-nicht. Diskutierte Alternativen (noch nicht umgesetzt): Pill-Button zum Antippen,
-Gedrückthalten mit Fortschrittsanimation, oder nur visuell abgespeckt. Entscheidung hängt
-laut Nutzer von der finalen Block-Karten-Optik ab — erst Design-Richtung festlegen, dann
-diesen Punkt nochmal aufgreifen.
+Der „alles geschafft"-Haken gefiel dem Nutzer optisch nicht (zu steril). Umgesetzt: der
+native Checkbox-Input bleibt (keine neue Logik/Markup nötig), ist aber per CSS
+(`appearance:none` + `::after`) als abgerundetes Quadrat gestaltet, das beim Ankreuzen
+grün wird und einen weißen Haken einblendet, dazu eine kurze Pop-Animation
+(`chk-pop`) — Wunsch des Nutzers nach einem „leeren Kästchen, das beim Anklicken grün
+wird" statt der alten sterilen Browser-Checkbox. Pill-Button und Gedrückthalten-Variante
+wurden nicht umgesetzt (nicht gewünscht).
 
 ---
 
 ## 8. Deployment
 
-Läuft bereits produktiv über **GitHub Pages**: Repo `aschowtjak/gym-log` (öffentlich,
-enthält nur Code, keine Trainingsdaten), Branch `master`, Pages-Quelle `/` (root).
-Ein neuer Stand ist ein normaler `git push` auf `master`; GitHub baut automatisch neu,
-danach am Handy zweimal öffnen (Service-Worker-Cache, siehe Abschnitt 6).
+Läuft produktiv über **GitHub Pages**: Repo `aschowtjak/gym-log` (öffentlich, enthält nur
+Code, keine Trainingsdaten), Pages-Quelle Branch `master`, Verzeichnis `/` (root). Solange
+PR #1 offen ist, wirkt sich `git push` auf den Feature-Branch **nicht** auf die live
+Seite aus — die baut nur aus `master`. Erst nach dem Mergen von PR #1 nach `master` zieht
+GitHub Pages automatisch nach; danach am Handy zweimal öffnen (Service-Worker-Cache, siehe
+Abschnitt 6). Wer den neuen Stand vorher testen will: lokal `python -m http.server 8099`
+auf dem `block-cards-and-stopwatch`-Branch, oder `gh pr checkout 1`.
 
 Am Handy: https://aschowtjak.github.io/gym-log/ in Chrome öffnen → ⋮ → „App
 installieren". Alle Trainingsdaten liegen ausschließlich im Browser des Geräts (IndexedDB).

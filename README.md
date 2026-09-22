@@ -18,9 +18,10 @@ Schrittweite vor.
 
 - Oben ein Umschalter **Tag A / Tag B** — mehr Pläne gibt es nicht. Darunter das
   heutige Datum plus ein kurzer Hinweis, ob dieser Tag heute schon gespeichert wurde.
-- Darunter die Plan-Tabelle Block | Übung | Sätze × Wdh., ergänzt um ein Gewichtsfeld:
-  vorbelegt mit dem Gewicht der letzten Einheit, mit **↑** markiert, wenn letztes Mal
-  alles geschafft wurde. Daneben der Haken „alles geschafft" für heute.
+- Darunter je Block (A/B/C) eine eigene Karte mit seinen Übungen: Name, Sätze × Wdh.
+  und ein Gewichtsfeld, vorbelegt mit dem Gewicht der letzten Einheit und mit **↑**
+  markiert, wenn letztes Mal alles geschafft wurde. Darunter der Haken „alles
+  geschafft" für heute.
 - Tippen auf eine Übungszeile (erkennbar am **›**) klappt ihre Historie auf: letzte
   Einheiten als Liste plus Fortschrittskurve.
 - Unten ein Knopf **„Einheit speichern"** — übernimmt alle angezeigten Gewichte als
@@ -109,4 +110,4 @@ Keine Build-Schritte, keine Abhängigkeiten — Dateien ändern, neu laden, fert
 Der Service Worker liefert die gecachte Version sofort aus und lädt die neue im
 Hintergrund (stale-while-revalidate): Nach einem Deploy ist die Änderung beim
 übernächsten Start aktiv. Soll sie sofort greifen, in `sw.js` die Zeile
-`const CACHE = 'gymlog-v4'` hochzählen.
+`const CACHE = 'gymlog-v7'` (aktueller Stand) hochzählen.
