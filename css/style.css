@@ -15,10 +15,12 @@ body{padding-bottom:calc(88px + var(--safe-b))}
   padding:calc(env(safe-area-inset-top,0px) + 10px) 12px 10px;
   background:rgba(15,17,21,.92);backdrop-filter:blur(12px);border-bottom:1px solid var(--line)}
 #topbar h1{flex:1;margin:0;font-size:19px;font-weight:700;text-align:center}
-.tb-left,.tb-right{width:44px;display:flex}
-.tb-right{justify-content:flex-end}
-.icon-btn{background:none;border:0;color:var(--fg);font-size:22px;padding:4px 8px;cursor:pointer}
+.tb-left{width:44px;display:flex}
+.tb-right{display:flex;justify-content:flex-end;gap:2px}
+.icon-btn{position:relative;background:none;border:0;color:var(--fg);font-size:22px;padding:4px 8px;cursor:pointer}
 #backBtn{font-size:30px;line-height:1}
+.sw-badge{position:absolute;top:1px;right:-2px;background:var(--acc);color:#04210f;
+  font-size:10px;font-weight:800;border-radius:8px;padding:1px 5px;font-variant-numeric:tabular-nums}
 
 /* ---------- layout ---------- */
 main{padding:14px 12px 20px;max-width:760px;margin:0 auto}
@@ -76,7 +78,7 @@ select{appearance:none;background-image:linear-gradient(45deg,transparent 50%,va
 .dayseg.on{background:var(--fg);color:var(--bg);border-color:transparent}
 .daymeta{color:var(--mut);font-size:12.5px;text-align:center;margin:0 4px 16px}
 
-/* ---------- Plan- und Gewichtstabelle ---------- */
+/* ---------- Tabellen (Plan-Editor, Verlauf-Detail, Historie je Übung) ---------- */
 table{width:100%;border-collapse:collapse;font-size:14px}
 th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--mut);padding:6px 6px;font-weight:700}
 td{padding:9px 6px;border-top:1px solid var(--line);vertical-align:top}
@@ -88,26 +90,43 @@ td.no{color:var(--bad);font-weight:700}
 .ptab td.blk-c{width:1%;white-space:nowrap;color:var(--acc2);font-weight:800;font-size:12.5px;padding-top:11px}
 .ptab .hint{color:var(--mut);font-size:12px;margin-top:2px}
 .ptab td.num{white-space:nowrap}
-.ex-row{cursor:pointer}
-.ex-row:active td{background:var(--bg3)}
-.exname{display:flex;align-items:center;justify-content:space-between;gap:8px}
+
+/* ---------- Plan-/Gewichtsübersicht: eigene Sektion je Block ---------- */
+.blk-card{background:var(--bg2);border:1px solid var(--line);border-radius:var(--r);
+  padding:2px 14px 4px;margin-bottom:12px}
+.blk-h{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--acc2);
+  font-weight:800;margin:10px 2px 2px}
+.ex-item{padding:12px 0}
+.ex-item+.ex-item{border-top:1px solid var(--line)}
+.ex-top{display:flex;justify-content:space-between;align-items:flex-start;gap:14px}
+.ex-left{flex:1;min-width:0}
+.ex-left[data-action]{cursor:pointer}
+.ex-left[data-action]:active{opacity:.65}
+.ex-name{display:flex;align-items:center;gap:6px;font-size:15.5px;font-weight:700;line-height:1.3}
 .chev-ico{color:var(--mut);font-size:17px;flex:0 0 auto;transition:transform .15s ease}
 .chev-ico.on{color:var(--acc2);transform:rotate(90deg)}
+.ex-sets{color:var(--mut);font-size:13px;margin-top:3px}
+.ex-hint{color:var(--mut);font-size:12.5px;margin-top:1px;opacity:.85}
+.ex-weight{flex:0 0 auto}
+.ex-weight .wrow{display:flex;align-items:center;gap:4px}
+.ex-weight .winp{width:98px}
+.ex-weight .winp input{text-align:right}
+.ex-item .chk{margin-top:10px}
 
-/* Gewicht + Haken direkt unter der Planzeile, volle Breite, große Tippflächen */
-.w-row td{border-top:0;padding:0 6px 10px}
-.wctrl{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-.winp{position:relative;width:112px}
+.winp{position:relative}
 .winp input{height:46px;text-align:center;font-size:17px;font-weight:700;padding:0 34px 0 10px}
 .winp .unit{position:absolute;right:11px;top:50%;transform:translateY(-50%);
   color:var(--mut);font-size:12px;font-weight:600;pointer-events:none}
-.up-badge{color:var(--warn);font-weight:800;font-size:19px;margin-left:-4px}
+.up-badge{color:var(--warn);font-weight:800;font-size:19px;margin-left:-2px}
 .chk{display:flex;align-items:center;gap:8px;cursor:pointer;color:var(--mut);font-size:13.5px;font-weight:600}
 .chk input{width:22px;height:22px;flex:0 0 auto}
 
-/* Historie / Kurve je Übung */
-.hist-row td{border-top:0;padding:0 0 8px}
-.histbox{background:var(--bg3);border-radius:12px;padding:8px 6px 2px;margin:0 2px}
+/* ---------- Stoppuhr ---------- */
+.sw-display{font-size:54px;font-weight:800;text-align:center;font-variant-numeric:tabular-nums;
+  letter-spacing:.01em;margin:14px 0 6px;color:var(--fg)}
+
+/* Historie / Kurve je Übung, unter der Planzeile aufgeklappt */
+.histbox{background:var(--bg3);border-radius:12px;padding:8px 6px 2px;margin:10px 0 0}
 .chartbox{padding:4px 2px}
 svg.chart{width:100%;height:auto;display:block}
 .histtab{font-size:12.5px}

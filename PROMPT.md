@@ -1,89 +1,61 @@
-# Prompt für die nächste Session
+# Prompt für die nächste Session (Design)
 
 Alles zwischen den Linien in einen neuen Chat kopieren. Arbeitsverzeichnis vorher auf
 `D:\Claude Code\Fitness App` setzen.
 
 ---
 
-Im Verzeichnis `D:\Claude Code\Fitness App` liegt „Gym Log", eine fertige, lauffähige
-Trainings-PWA (Plain HTML/CSS/JS, IndexedDB, Service Worker, kein Build, keine
-Abhängigkeiten, deutschsprachig, Dark Theme, Mobile-First). **Lies zuerst `HANDOVER.md`** —
-dort stehen Aufbau, Datenmodell, fachliche Festlegungen und Stolperfallen.
+Im Verzeichnis `D:\Claude Code\Fitness App` liegt „Gym Log", eine lauffähige Trainings-PWA
+(Plain HTML/CSS/JS, IndexedDB, Service Worker, kein Build, keine Abhängigkeiten,
+deutschsprachig, Dark Theme, Mobile-First, Zielgerät Android/Pixel 7a/8). **Lies zuerst
+`HANDOVER.md`** — dort stehen Aufbau, Datenmodell, fachliche Festlegungen und
+Stolperfallen, insbesondere Abschnitt 7 („Design-Recherche & drei Richtungsvorschläge").
 
-Die App ist zu umfangreich geraten. Bau sie auf das Wesentliche zurück. Die bestehende
-Technik (PWA, IndexedDB, `js/db.js`, `js/chart.js`, Backup-Export/-Import, Plan-Editor)
-bleibt, `js/app.js` und die Oberfläche werden neu aufgebaut.
+**Wichtig:** Der aktuelle Stand in diesem Ordner ist **nicht gepusht** (nur lokal, siehe
+`git status`). Die live auf GitHub Pages laufende Version ist älter. In dieser Session
+geht es ausschließlich um **Design**, nicht um neue Funktionen — Struktur, Datenmodell
+und Features bleiben wie sie sind. Am Ende committen und pushen, wenn der Nutzer den
+neuen Look freigegeben hat, sonst alles lokal lassen (nicht von selbst pushen).
 
-**Zweck der App in einem Satz:** Beim Training am Handy sofort sehen, mit welchem Gewicht
-jede Übung heute dran ist — abgeleitet aus der letzten Einheit.
+## Aufgabe
 
-## Das Prinzip
+In der letzten Session wurden drei CSS-Richtungen für die Block-Karten der
+Plan-/Gewichtsübersicht recherchiert und als Mockup gegenübergestellt:
 
-Das Arbeitsgewicht der nächsten Einheit ergibt sich vollständig aus der letzten:
-Gewicht plus die Information, ob **alle Sätze mit allen Wiederholungen** geschafft wurden.
-War alles geschafft, wird beim nächsten Mal erhöht. **Um wie viel, entscheidet der Nutzer
-selbst und tippt es manuell ein** — die App rechnet nichts hoch und schlägt keine
-Schrittweite vor. Pro Übung also: ein Textfeld fürs Gewicht und ein Haken
-„alles geschafft?". Mehr nicht, insbesondere keine Einzelsätze.
+1. **Bento Minimal** — größerer Radius (20px), je Block A/B/C eine eigene Akzentfarbe
+   für die Überschrift statt überall Blau.
+2. **High-Contrast Numeric** — die Gewichtszahl wird sehr groß und ist der visuelle
+   Fokus, alles drumherum bewusst gedämpft.
+3. **Soft Depth** — weicher Schatten statt harter Kante um die Block-Karten, minimal
+   hellerer Karten-Verlauf, großer Radius, einfarbig.
 
-## Alles auf einer Seite
+Das Vergleichs-Mockup liegt hier: **https://claude.ai/artifact/DEPd9BAV6CWV5CZYDK12Er**
+(privat). Zeig es dem Nutzer zu Beginn der Session (oder frag, ob er es schon gesehen hat)
+und kläre, welche Richtung er will — auch eine Mischung ist möglich. Setze die gewählte
+Richtung dann in `css/style.css` um (betrifft vor allem `.blk-card`, `.blk-h`, `.ex-weight`,
+`.wnum`/`.winp input`, ggf. neue CSS-Variablen für Block-Akzentfarben).
 
-Es gibt genau eine Seite, keine Reiter-Navigation:
+Danach den offenen Punkt aus der letzten Runde aufgreifen: der **„alles geschafft"-Haken**
+gefällt dem Nutzer optisch nicht. Zur Diskussion standen — jetzt, wo die Block-Karten-Optik
+feststeht, lässt sich das konkret entscheiden:
 
-1. Oben ein Umschalter **[Tag A] [Tag B]** (mehr Pläne gibt es nicht, kein freies Training).
-2. Darunter die Plan-Übersicht in der bestehenden, bewährten Tabellenform, ergänzt um eine
-   **Spalte Gewicht**:
+- Haken durch eine antippbare Pill ersetzen, die sich grün färbt.
+- Gedrückthalten mit Fortschrittsanimation (kein Bibliotheks-Bedarf, plain
+  `touchstart`/`touchmove`/`touchend` + Timer).
+- Haken beibehalten, nur visuell abgespeckt (kleiner, dezenter, ohne eigenen Rahmen).
 
-   | Block | Übung | Sätze × Wdh. | Gewicht |
-   |---|---|---|---|
-   | A1 | Beinpresse einbeinig (≤90°)<br><sub>explosiv hoch, RIR 2–3</sub> | 4 × 5–8 | `40` ↑ |
-
-   - Die Vorgabe aus der letzten Einheit steht als Wert **vorbelegt im Eingabefeld**, damit
-     man sie nur überschreiben muss.
-   - Soll laut letzter Einheit erhöht werden, wird das deutlich markiert — altes Gewicht mit
-     einem Pfeil nach oben bzw. einem Plus dahinter (z.B. „40 kg ↑"). Die Markierung ist der
-     Hinweis, jetzt manuell zu erhöhen.
-   - War die letzte Einheit nicht vollständig geschafft, keine Markierung: Gewicht halten.
-   - Ohne Historie bleibt das Feld leer.
-   - Daneben der Haken **„alles geschafft"** für die heutige Einheit.
-   - Der Hinweis aus dem Plan (z.B. „3 s exzentrisch") bleibt sichtbar, aber dezent.
-3. Unten ein Knopf zum Speichern der Einheit.
-4. Tippen auf eine Übungszeile klappt deren Historie auf: die letzten Einheiten als Liste
-   (Datum, Gewicht, geschafft ja/nein) und die vorhandene Kurve aus `js/chart.js`.
-   Kein separater Fortschritts-Reiter.
-5. Plan bearbeiten, Backup und Demodaten löschen gehören in ein unaufdringliches Menü
-   (Zahnrad in der Kopfzeile).
-
-Die Seite soll ruhig wirken: wenig Farbe, klare Zeilen, große Tippflächen fürs Studio.
-
-## Tracking-Regeln
-
-- **Nur Übungen mit Zusatzgewicht werden protokolliert.** Ohne Eingabefeld und ohne Haken
-  bleiben: Band Pull-Aparts und Dead Bugs (Tag A), Side Plank und Hyperextensions (Tag B).
-  Sie stehen weiterhin in der Übersicht, damit der Plan vollständig ist.
-- **Tag A und Tag B sind strikt getrennt.** Dieselbe Übung hat an beiden Tagen einen anderen
-  Fokus (Schnellkraft vs. Hypertrophie) und ein anderes Arbeitsgewicht. Historie und
-  Vorbelegung immer über `planId + exerciseId` schlüsseln, nie nur über die Übung.
-  Betrifft Hip Thrust Maschine, Seated Leg Curl und Beinpresse einbeinig.
-- Übungen ohne Bewertung dürfen **nicht** gespeichert werden, sonst landen vorbelegte
-  Gewichte übersprungener Übungen als trainiert im Verlauf (siehe `touched()` im Altcode).
-
-## Demodaten
-
-Lege **fiktive Trainingsdaten** an, damit sich die App direkt wie an einem normalen
-Trainingstag anschauen lässt: rund acht Einheiten über die letzten sechs Wochen, abwechselnd
-Tag A und Tag B, plausible Gewichte mit erkennbarer Steigerung, dabei zwei oder drei Übungen
-„nicht geschafft". Die jüngste Einheit soll bei mehreren Übungen den Steigerungs-Marker
-hinterlassen, damit beim Öffnen sowohl vorbelegte Gewichte als auch Pfeile zu sehen sind und
-die Historie je Übung eine Kurve zeigt. Die Daten müssen als Demodaten erkennbar und mit
-einem Knopf im Menü rückstandsfrei löschbar sein.
+Frag den Nutzer, welche Richtung er will, bevor du das umsetzt — das ist eine
+Geschmacksfrage, kein technisches Detail.
 
 ## Rahmen
 
 - Keine neuen Abhängigkeiten, kein Build-Schritt, weiterhin offlinefähig und installierbar.
-- Oberfläche auf Deutsch, Zielgerät ist ein Android-Handy.
-- Vor Abschluss im Browser bei 375 × 812 px durchspielen: Tag A öffnen, Gewichte eintragen,
-  Haken setzen, speichern, Tag B prüfen, erneut Tag A öffnen und kontrollieren, dass Vorgabe
-  und Marker stimmen. Beachte den Service-Worker-Hinweis in `HANDOVER.md`, sonst testest du
-  die alte Version.
+- Nur CSS-/Markup-Änderungen, keine neue Logik nötig (Datenmodell, `js/app.js`-Funktionen
+  bleiben wie sie sind, außer die Markup-Erzeugung in `planRow()`/`viewMain()` muss
+  angepasst werden, falls die gewählte Richtung neue Klassen braucht).
+- Vor Abschluss im Browser-Pane bei **412 × 915** (nicht 375 × 812 — das ist iPhone-Maß,
+  siehe HANDOVER Abschnitt 6) durchspielen: beide Tage, Historie aufklappen, Speichern,
+  Stoppuhr. Service-Worker-Cache vorher löschen (Code in HANDOVER Abschnitt 6), sonst
+  testest du die alte Version. `sw.js`-`CACHE`-Version bei jeder Auslieferung hochzählen.
 - `README.md` und `HANDOVER.md` am Ende an den neuen Stand anpassen.
+- Erst committen/pushen, wenn der Nutzer das fertige Design abgenommen hat.

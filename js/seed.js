@@ -51,7 +51,7 @@ const SEED_PLANS = [
     ['B3', 'Dead Bugs', '3', '10/S.', 'aktive Pause'],
     ['C1', 'Seated Leg Curl', '2–3', '10–15', '3 s exzentrisch'],
     ['C2', 'Wadenheben (Maschine)', '3', '10–15', ''],
-    ['Finisher', 'Woodchopper', '3', '6–8/S.', 'explosiv'],
+    ['C3', 'Woodchopper', '3', '6–8/S.', 'explosiv'],
   ]],
   ['Tag B', [
     ['A1', 'Hip Thrust Maschine', '4', '5–8', 'explosiv hoch'],
@@ -62,7 +62,7 @@ const SEED_PLANS = [
     ['B3', 'Side Plank', '3', '30–45 s', 'aktive Pause'],
     ['C1', 'Beinpresse einbeinig (≤90°)', '3', '10–15', 'Hypertrophie'],
     ['C2', 'Abduktoren-Maschine', '3', '15–20', ''],
-    ['Finisher', 'Hyperextensions', '2–3', '10–12', 'gluteusbetont'],
+    ['C3', 'Hyperextensions', '2–3', '10–12', 'gluteusbetont'],
   ]],
 ];
 

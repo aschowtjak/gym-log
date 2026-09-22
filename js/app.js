@@ -14,6 +14,7 @@ const S = {
   draft: {},                 // { [planId]: { [exerciseId]: {weight, done} } }
   openKey: null,             // "planId|exerciseId" der aufgeklappten Historie
   editPlan: null,
+  stopwatch: { startedAt: null, elapsed: 0, running: false },
 };
 
 /* ---------------- Helfer ---------------- */
@@ -34,6 +35,10 @@ const UNITS = { kg: 'kg', s: 'Sek.', x: '' };
 const unitOf = (id) => { const e = S.exercises.find((x) => x.id === id); return (e && e.unit) || 'kg'; };
 const exName = (id) => { const e = S.exercises.find((x) => x.id === id); return e ? e.name : 'Übung'; };
 const exByName = (n) => S.exercises.find((e) => e.name === n);
+/* Blockgruppierung für die Übersicht: "A1"/"A2"/"A3" -> Gruppe "A" ("Block A"),
+   "Finisher" bleibt eine eigene Gruppe mit ihrem Namen als Überschrift. */
+const grpKey = (block) => (/^[A-Za-z]\d+$/.test(block || '') ? block[0].toUpperCase() : (block || '–'));
+const grpLabel = (k) => (k.length === 1 ? 'Block ' + k : k);
 
 function toast(msg, ms) {
   const t = $('#toast');
@@ -218,10 +223,20 @@ function viewMain() {
     : lastOther ? ' · zuletzt ' + fmtShort(lastOther.date) : ' · noch nie trainiert';
   h += '<div class="daymeta">' + esc(meta) + '</div>';
 
-  h += '<div class="card" style="padding:6px 10px 10px"><table class="ptab">' +
-    '<tr><th>Block</th><th>Übung</th><th class="num">Sätze × Wdh.</th></tr>';
-  plan.items.forEach((it) => { h += planRow(plan, it); });
-  h += '</table></div>';
+  /* Aufeinanderfolgende Positionen mit gleichem Blockbuchstaben zu einer Gruppe
+     zusammenfassen, jede Gruppe bekommt eine eigene umrandete Sektion. */
+  const groups = [];
+  plan.items.forEach((it) => {
+    const g = grpKey(it.block);
+    const last = groups[groups.length - 1];
+    if (!last || last.key !== g) groups.push({ key: g, items: [it] });
+    else last.items.push(it);
+  });
+  groups.forEach((grp) => {
+    h += '<div class="blk-card"><div class="blk-h">' + esc(grpLabel(grp.key)) + '</div>';
+    grp.items.forEach((it) => { h += planRow(plan, it); });
+    h += '</div>';
+  });
 
   return h;
 }
@@ -244,31 +259,35 @@ function planRow(plan, it) {
   const unit = unitOf(exId);
   const tracked = unit !== 'x';
   const isOpen = tracked && S.openKey === plan.id + '|' + exId;
+  const d = tracked ? S.draft[plan.id][exId] : null;
+  const prev = tracked ? lastLog(exId, plan.id) : null;
+  const up = tracked && prev && prev.done && prev.weight > 0;
 
-  let h = '<tr class="ex-row"' + (tracked ? ' data-action="toggle-hist" data-id="' + exId + '"' : '') + '>' +
-    '<td class="blk-c">' + esc(it.block || '') + '</td>' +
-    '<td><div class="exname">' + esc(exName(exId)) +
+  let h = '<div class="ex-item"><div class="ex-top">' +
+    '<div class="ex-left"' + (tracked ? ' data-action="toggle-hist" data-id="' + exId + '"' : '') + '>' +
+    '<div class="ex-name">' + esc(exName(exId)) +
     (tracked ? '<span class="chev-ico' + (isOpen ? ' on' : '') + '">›</span>' : '') + '</div>' +
-    (it.hint ? '<div class="hint">' + esc(it.hint) + '</div>' : '') + '</td>' +
-    '<td class="num nowrap">' + esc((it.targetSets || '?') + ' × ' + (it.targetReps || '?')) + '</td></tr>';
+    '<div class="ex-sets">' + esc((it.targetSets || '?') + ' × ' + (it.targetReps || '?')) + '</div>' +
+    (it.hint ? '<div class="ex-hint">' + esc(it.hint) + '</div>' : '') +
+    '</div>';
 
-  if (!tracked) return h;
-
-  const d = S.draft[plan.id][exId];
-  const prev = lastLog(exId, plan.id);
-  const up = prev && prev.done && prev.weight > 0;
-
-  h += '<tr class="w-row"><td colspan="3"><div class="wctrl">' +
-    '<div class="winp"><input type="text" inputmode="decimal" data-in="weight" data-plan="' + plan.id + '" data-id="' + exId + '" ' +
-    'value="' + esc(d.weight) + '" placeholder="–"><span class="unit">' + UNITS[unit] + '</span></div>' +
-    (up ? '<span class="up-badge">↑</span>' : '') +
-    '<label class="chk"><input type="checkbox" data-in="done" data-plan="' + plan.id + '" data-id="' + exId + '"' +
-    (d.done ? ' checked' : '') + '><span>alles geschafft</span></label></div></td></tr>';
-
-  if (isOpen) {
-    h += '<tr class="hist-row"><td colspan="3">' + historyBox(exId, plan.id, unit) + '</td></tr>';
+  if (tracked) {
+    h += '<div class="ex-weight"><div class="wrow">' +
+      '<div class="winp"><input type="text" inputmode="decimal" data-in="weight" data-plan="' + plan.id + '" data-id="' + exId + '" ' +
+      'value="' + esc(d.weight) + '" placeholder="–"><span class="unit">' + UNITS[unit] + '</span></div>' +
+      (up ? '<span class="up-badge">↑</span>' : '') +
+      '</div></div>';
   }
-  return h;
+  h += '</div>';
+
+  if (tracked) {
+    h += '<label class="chk"><input type="checkbox" data-in="done" data-plan="' + plan.id + '" data-id="' + exId + '"' +
+      (d.done ? ' checked' : '') + '><span>alles geschafft</span></label>';
+  }
+
+  if (isOpen) h += historyBox(exId, plan.id, unit);
+
+  return h + '</div>';
 }
 
 function historyBox(exId, planId, unit) {
@@ -477,10 +496,15 @@ function pickExercise(id) {
   }
   closeModal(); render();
 }
+/* schlägt A1, A2, A3 … fort - sucht rückwärts den letzten auswertbaren Blockcode,
+   damit ein Eintrag ohne Nummer (z.B. früher "Finisher") die Zählung nicht auf
+   A1 zurückwirft. */
 function nextBlock(items) {
-  const last = items.length ? items[items.length - 1].block || '' : '';
-  const m = /^([A-Za-z])(\d+)$/.exec(last);
-  return m ? m[1] + (parseInt(m[2], 10) + 1) : 'A1';
+  for (let i = items.length - 1; i >= 0; i--) {
+    const m = /^([A-Za-z])(\d+)$/.exec(items[i].block || '');
+    if (m) return m[1] + (parseInt(m[2], 10) + 1);
+  }
+  return 'A1';
 }
 
 function openExerciseForm() {
@@ -505,6 +529,58 @@ async function saveExercise() {
   sortExercises();
   closeModal();
   pickExercise(ex.id);
+}
+
+/* ---------------- Stoppuhr ---------------- */
+/* Frei zugänglich über das Topbar-Icon, unabhängig von Übung/Tag - für Planks,
+   Side Plank & Co., deren Sekunden man danach von Hand ins Gewichtsfeld einträgt.
+   Läuft weiter, auch wenn das Modal geschlossen wird (nur die Zeitbasis zählt). */
+let _swTimer = null;
+const swElapsedMs = () => S.stopwatch.elapsed + (S.stopwatch.running ? Date.now() - S.stopwatch.startedAt : 0);
+const swFmt = (ms) => {
+  const cs = Math.floor(ms / 10) % 100, s = Math.floor(ms / 1000) % 60, m = Math.floor(ms / 60000);
+  return String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0') + '.' + String(cs).padStart(2, '0');
+};
+const swFmtShort = (ms) => {
+  const s = Math.floor(ms / 1000) % 60, m = Math.floor(ms / 60000);
+  return String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
+};
+
+function swTick() {
+  const disp = $('#swDisplay'); if (disp) disp.textContent = swFmt(swElapsedMs());
+  const badge = $('#swBadge');
+  if (badge) {
+    if (S.stopwatch.running) { badge.textContent = swFmtShort(swElapsedMs()); badge.classList.remove('hidden'); }
+    else badge.classList.add('hidden');
+  }
+}
+
+function stopwatchHTML() {
+  return '<div class="modal-h"><h2>Stoppuhr</h2><button class="icon-btn" data-action="modal-close">✕</button></div>' +
+    '<div class="sw-display" id="swDisplay">' + swFmt(swElapsedMs()) + '</div>' +
+    '<div class="btn-row" style="margin-top:18px">' +
+    (S.stopwatch.running
+      ? '<button class="btn full blue" data-action="sw-pause">Pause</button>'
+      : '<button class="btn full primary" data-action="sw-start">' + (S.stopwatch.elapsed ? 'Weiter' : 'Start') + '</button>') +
+    '<button class="btn full ghost" data-action="sw-reset">Zurücksetzen</button></div>';
+}
+
+function openStopwatch() { openModal(stopwatchHTML()); swTick(); }
+
+function swStart() {
+  S.stopwatch.running = true; S.stopwatch.startedAt = Date.now();
+  clearInterval(_swTimer); _swTimer = setInterval(swTick, 200);
+  openModal(stopwatchHTML()); swTick();
+}
+function swPause() {
+  S.stopwatch.elapsed = swElapsedMs(); S.stopwatch.running = false;
+  clearInterval(_swTimer);
+  openModal(stopwatchHTML()); swTick();
+}
+function swReset() {
+  clearInterval(_swTimer);
+  S.stopwatch = { startedAt: null, elapsed: 0, running: false };
+  openModal(stopwatchHTML()); swTick();
 }
 
 /* ---------------- Modals ---------------- */
@@ -571,6 +647,11 @@ function onClick(ev) {
     case 'menu': openMenu(); break;
     case 'back': nav(BACKABLE[S.view] || 'main'); break;
     case 'modal-close': closeModal(); break;
+
+    case 'stopwatch': openStopwatch(); break;
+    case 'sw-start': swStart(); break;
+    case 'sw-pause': swPause(); break;
+    case 'sw-reset': swReset(); break;
 
     case 'day': S.day = id; S.openKey = null; render(); break;
     case 'toggle-hist': { const key = S.day + '|' + id; S.openKey = S.openKey === key ? null : key; render(); break; }

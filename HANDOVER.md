@@ -1,13 +1,16 @@
 # Übergabe: Gym Log
 
-Stand: 21.09.2026, nach dem Rückbau auf eine Seite plus einer Feedback-Runde aus dem
-echten Betrieb (Deployment auf GitHub Pages, Nutzung am Handy). `PROMPT.md` enthält den
-ursprünglichen Umbau-Auftrag und ist erledigt — historisch interessant, keine offene
-Aufgabe mehr.
+Stand: 21.09.2026, nach dem Rückbau auf eine Seite, einer Feedback-Runde aus dem echten
+Betrieb (Deployment, Nutzung am Handy) und einer zweiten Runde mit Layout-Umbau + neuen
+Features. `PROMPT.md` enthält den Auftrag für die **nächste** Session (Design) — der
+ursprüngliche Umbau-Auftrag ist historisch, keine offene Aufgabe mehr.
 
-**Live:** https://aschowtjak.github.io/gym-log/ (Repo `aschowtjak/gym-log` auf GitHub,
-Branch `master`, GitHub Pages auf Root). Deploy = `git push`; nach zwei App-Starts ist
-eine Änderung aktiv (Service-Worker-Cache, siehe Abschnitt 6).
+**⚠️ Aktueller Stand ist NICHT gepusht.** Auf ausdrücklichen Wunsch des Nutzers liegen die
+Änderungen dieser Session nur lokal in `D:\Claude Code\Fitness App` (`git status` zeigt sie
+als „modified", nicht committed). Die live auf GitHub Pages laufende Version
+(https://aschowtjak.github.io/gym-log/) entspricht noch dem **vorherigen** Stand (ohne
+Block-Karten, ohne Stoppuhr, Finisher noch als eigener Block). Committen/pushen erst, wenn
+der Nutzer das Design final abgenommen hat — siehe `PROMPT.md`.
 
 ---
 
@@ -85,27 +88,39 @@ letztere beide nur über das Zahnrad-Menü erreichbar. Kein Tabbar.
   (`fmtFullDate`) plus, je nach Zustand, „heute bereits gespeichert (erneutes Speichern
   überschreibt)", „zuletzt <Datum>" oder „noch nie trainiert". Zweck: sofort erkennbar,
   dass eine neue, datierte Einheit begonnen wird, und was beim Speichern passiert.
-- **Plan-/Gewichtstabelle** (`<table class="ptab">`): pro Übung zwei bis drei `<tr>`:
-  1. die eigentliche Planzeile (Block, Übung + Hinweis, Sätze × Wdh.) — bei Übungen mit
-     Gewicht trägt der Übungsname einen kleinen Chevron (`.chev-ico`, `›`), der beim
-     Aufklappen auf `.on` (blau, 90° gedreht) wechselt. Reine Sichtbarkeits-Korrektur:
-     die Historie gab es vorher schon, war aber nicht als tippbar erkennbar.
-  2. bei Übungen mit Gewicht (`unit !== 'x'`) eine zweite Zeile über die volle Breite
-     mit Gewichtsfeld, ↑-Marker und dem Haken „alles geschafft" (`.wctrl`),
-  3. bei aufgeklappter Historie eine dritte Zeile mit Kurve (`Chart.line`) und Liste
-     der letzten Einheiten.
-  Die zweite Zeile ist bewusst eine eigene `<tr>` statt in dieselbe Zelle gequetscht —
-  dadurch bleiben die Tippflächen groß, ohne dass Klicks auf Eingabefeld/Haken versehentlich
-  die Historie auf- oder zuklappen (das Toggle hängt nur an der ersten `<tr>`).
+- **Plan-/Gewichtsübersicht — eine Karte pro Block** (`.blk-card`, seit dem Layout-Umbau
+  vom 21.09.): keine Tabelle mehr. `viewMain()` fasst aufeinanderfolgende Plan-Positionen
+  mit demselben Blockbuchstaben (`grpKey()`/`grpLabel()`, z.B. „A1"/„A2"/„A3" → Gruppe „A"
+  → Überschrift „Block A") zu einer eigenen umrandeten Karte zusammen. Innerhalb einer
+  Karte ist jede Übung ein `.ex-item`, getrennt nur durch eine dünne Linie
+  (`.ex-item + .ex-item{border-top}`), **keine Nummerierung**. Pro Übung: links
+  `.ex-left` gestapelt (Name mit Chevron `.chev-ico` → Sätze × Wdh. → Hinweis, dezent),
+  rechts `.ex-weight` **rechtsbündig** (Gewichtsfeld + ↑-Marker), darunter der Haken
+  „alles geschafft". `.ex-left` trägt `data-action="toggle-hist"` — **nur** dieser Bereich
+  ist tippbar für die Historie, Gewichtsfeld/Haken lösen bewusst nichts aus (eigenes
+  Element, kein Event-Bubbling-Problem). Bei aufgeklappter Historie hängt `historyBox()`
+  (Kurve + Liste) direkt unter dem Haken im selben `.ex-item`.
+  „Finisher" gibt es seit dieser Runde nicht mehr als eigene Gruppe — beide Pläne haben
+  ihn testweise als „C3" in Block C integriert (`js/seed.js`, `SEED_PLANS`).
 - **Speichern-Leiste** (`#savebar`, fixiert unten) ersetzt die alte Tabbar/Restbar.
+- **Stoppuhr** (seit 21.09., zweite Runde): Icon im Topbar neben dem Zahnrad
+  (`data-action="stopwatch"`), von jeder Seite aus erreichbar — nicht an eine bestimmte
+  Übung gekoppelt, der Nutzer liest die Sekunden ab und trägt sie von Hand ins
+  entsprechende Gewichtsfeld ein (z.B. Side Plank, `unit:'s'`). Zustand lebt in
+  `S.stopwatch` (`startedAt`, `elapsed`, `running`), nicht in IndexedDB — bewusst
+  flüchtig. Läuft über `setInterval` + `Date.now()`-Differenz weiter, auch wenn das
+  Modal geschlossen wird; ein Badge im Topbar (`#swBadge`) zeigt dann die laufende Zeit
+  kompakt an. Siehe `swTick()`/`swStart()`/`swPause()`/`swReset()` in `js/app.js`.
 - **Zahnrad-Menü** (Modal): „Verlauf" → alle Einheiten (`nav('history')`), dazu Liste
   der Pläne → „Plan bearbeiten", Backup Export/Import, „Demodaten löschen" (nur sichtbar,
-  wenn welche existieren) und „Alle Daten löschen".
+  wenn welche existieren) und „Alle Daten löschen". Der Nutzer hat in der zweiten
+  Feedback-Runde bestätigt, dass die Verlauf-Liste im Menü als Zugriffspunkt reicht —
+  kein separater, prominenterer Einstiegspunkt nötig.
 - **Verlauf** (`viewHistory()`): alle Workouts, neueste zuerst, nach Monat gruppiert,
   Demo-Einheiten mit „· Demo" markiert. Tippen öffnet `openWorkoutDetail()` als Modal
-  (Block/Übung/Gewicht/Status je Eintrag) mit „Löschen" (`deleteWorkout()`, einzelne
-  Einheit endgültig entfernen — z.B. um eine versehentlich mitgeloggte Übung wieder
-  loszuwerden, siehe Abschnitt 5).
+  (Block/Übung/Gewicht/Status je Eintrag, noch als `<table class="ptab">` — unverändert)
+  mit „Löschen" (`deleteWorkout()`, einzelne Einheit endgültig entfernen — z.B. um eine
+  versehentlich mitgeloggte Übung wieder loszuwerden, siehe Abschnitt 5).
 
 ### Wichtige Funktionen in `js/app.js`
 
@@ -119,6 +134,13 @@ letztere beide nur über das Zahnrad-Menü erreichbar. Kein Tabbar.
   bereits vorhandenen Eintrag für `planId + heutiges Datum` statt einen zweiten
   anzulegen. Verwirft danach den Draft dieses Plans (wird beim nächsten Rendern aus der
   frisch gespeicherten Einheit neu aufgebaut).
+- `nextBlock(items)` — schlägt beim Hinzufügen einer Übung im Plan-Editor den nächsten
+  Blockcode vor (z.B. „C3" → „C4"). **Bugfix 21.09.:** sucht jetzt rückwärts nach dem
+  letzten Eintrag mit auswertbarem Blockcode (`/^[A-Za-z]\d+$/`), statt nur den
+  allerletzten Plan-Eintrag anzuschauen. Vorher fiel die Zählung auf „A1" zurück, sobald
+  der letzte Eintrag einen nicht passenden Blockcode hatte (genau der Fall war „Finisher"
+  am Planende — mit ausgelöst durch den Nutzer-Bugreport, dass neu hinzugefügte Übungen
+  „nicht im richtigen Block" landeten).
 
 ---
 
@@ -177,7 +199,7 @@ Kurve mit vier Punkten.
   const rs = await navigator.serviceWorker.getRegistrations(); for (const r of rs) await r.unregister();
   const ks = await caches.keys(); for (const k of ks) await caches.delete(k); location.reload();
   ```
-  Für ausgelieferte Updates `const CACHE = 'gymlog-v4'` hochzählen (aktuell v4).
+  Für ausgelieferte Updates `const CACHE = 'gymlog-v6'` hochzählen (aktuell v6).
 - **Zielgerät Pixel 7a/8:** im Browser-Pane mit `resize_window` auf 412 × 915 testen
   (CSS-Pixel-Viewport beider Geräte in Chrome, DPR 2.625), nicht mehr 375 × 812
   (iPhone-Maß aus dem ersten Umbau). Das Layout ist fluid und braucht dafür keine
@@ -204,7 +226,41 @@ Kurve mit vier Punkten.
 
 ---
 
-## 7. Deployment
+## 7. Design-Recherche & drei Richtungsvorschläge (offen für nächste Session)
+
+Auf Nutzerwunsch online nach Design-Trends für Fitness-/Trainings-Apps recherchiert
+(Dribbble, Mobbin, GitHub-Themen „fitness-tracker", Bento-Grid-Trend 2026). Kernaussagen:
+dunkle, fast schwarze Flächen (~#0B0B0F) mit **genau einer** kräftigen Akzentfarbe,
+**große Zahlen** für Live-Werte, **Bento-Grid-Sektionen** (abgegrenzte Kacheln, 12–24px
+Radius) — deckt sich mit dem in dieser Session gebauten Block-Karten-Layout. Details und
+Quellen: siehe Chatverlauf dieser Session.
+
+Drei ausgearbeitete Richtungen, rein auf CSS-Variablen der bestehenden App aufgesetzt
+(keine neue Schrift, keine Bibliothek):
+
+1. **Bento Minimal** — größerer Karten-Radius (20px statt 14px), jeder Block (A/B/C)
+   bekommt eine eigene Akzentfarbe für die Überschrift (Blau/Violett/Grün) statt überall
+   dasselbe Blau.
+2. **High-Contrast Numeric** — Gewichtszahl wird sehr groß (~30px) und ist der visuelle
+   Fokus, Hinweistext verschwindet/wird kleiner, alles drumherum bewusst gedämpft.
+3. **Soft Depth** — weicher Schatten statt harter 1px-Kante um die Block-Karten, minimal
+   hellerer Verlauf im Kartenhintergrund, großer Radius (22px), einfarbig (kein
+   Regenbogen wie bei Richtung 1).
+
+Ein Vergleichs-Mockup aller drei (mit echtem Inhalt: Block A/B aus Tag A) liegt als
+Artifact vor: **https://claude.ai/artifact/DEPd9BAV6CWV5CZYDK12Er** (privat, nur für den
+Ersteller sichtbar). Der Nutzer hat sich in dieser Session noch **nicht** für eine
+Richtung entschieden — das ist die Aufgabe der nächsten Session, siehe `PROMPT.md`.
+
+Offener Punkt aus derselben Runde: der „alles geschafft"-Haken gefällt dem Nutzer optisch
+nicht. Diskutierte Alternativen (noch nicht umgesetzt): Pill-Button zum Antippen,
+Gedrückthalten mit Fortschrittsanimation, oder nur visuell abgespeckt. Entscheidung hängt
+laut Nutzer von der finalen Block-Karten-Optik ab — erst Design-Richtung festlegen, dann
+diesen Punkt nochmal aufgreifen.
+
+---
+
+## 8. Deployment
 
 Läuft bereits produktiv über **GitHub Pages**: Repo `aschowtjak/gym-log` (öffentlich,
 enthält nur Code, keine Trainingsdaten), Branch `master`, Pages-Quelle `/` (root).

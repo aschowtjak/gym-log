@@ -18,7 +18,10 @@
 <header id="topbar">
   <div class="tb-left"><button class="icon-btn hidden" id="backBtn" data-action="back" aria-label="Zurück">‹</button></div>
   <h1 id="title">Training</h1>
-  <div class="tb-right"><button class="icon-btn" data-action="menu" aria-label="Menü">⚙</button></div>
+  <div class="tb-right">
+    <button class="icon-btn sw-btn" data-action="stopwatch" aria-label="Stoppuhr">⏱<span id="swBadge" class="sw-badge hidden"></span></button>
+    <button class="icon-btn" data-action="menu" aria-label="Menü">⚙</button>
+  </div>
 </header>
 
 <main id="app"></main>
