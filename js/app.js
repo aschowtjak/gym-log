@@ -10,7 +10,7 @@ const S = {
   exercises: [],
   plans: [],
   profiles: [],              // gruppieren Pläne, z.B. verschiedene Trainingsprogramme
-  profile: null,              // aktuell gewähltes Profil (nicht persistiert, Default = erstes)
+  profile: null,              // aktuell gewähltes Profil, persistiert in meta.profile
   workouts: [],             // neueste zuerst
   day: null,                 // aktuell gewählte planId
   draft: {},                 // { [planId]: { _date, [exerciseId]: {weight, done} } }
@@ -69,7 +69,11 @@ async function init() {
   if (draftRec && draftRec.value) S.draft = draftRec.value;
 
   sortExercises(); sortPlans(); sortProfiles();
-  if (S.profiles.length) S.profile = S.profiles[0].id;
+  if (S.profiles.length) {
+    const profileRec = await DB.get('meta', 'profile');
+    const wanted = profileRec && profileRec.value;
+    S.profile = (wanted && S.profiles.some((p) => p.id === wanted)) ? wanted : S.profiles[0].id;
+  }
   const myPlans = plansOfProfile(S.profile);
   if (myPlans.length) S.day = myPlans[0].id;
 
@@ -88,12 +92,14 @@ function sortProfiles() { S.profiles.sort((a, b) => (a.order || 0) - (b.order ||
 
 /* Icon im Topbar: springt zum nächsten Profil (aktuell genau zwei, daher praktisch ein
    Umschalter). S.day/S.histPlan werden auf den ersten Plan des neuen Profils zurückgesetzt,
-   da sie zum vorherigen Profil gehörten. */
-function switchProfile() {
+   da sie zum vorherigen Profil gehörten. Die Wahl wird persistiert (`meta.profile`),
+   damit die App beim nächsten Start wieder im zuletzt gewählten Profil öffnet. */
+async function switchProfile() {
   if (S.profiles.length < 2) return;
   const i = S.profiles.findIndex((p) => p.id === S.profile);
   const next = S.profiles[(i + 1) % S.profiles.length];
   S.profile = next.id;
+  await DB.put('meta', { key: 'profile', value: next.id });
   const myPlans = plansOfProfile(S.profile);
   S.day = myPlans.length ? myPlans[0].id : null;
   S.histPlan = null;
@@ -148,7 +154,7 @@ async function ensureSeed() {
 async function ensureMigration() {
   const rec = await DB.get('meta', 'migration');
   const have = rec ? rec.value : 0;
-  if (have >= 2) return;
+  if (have >= 3) return;
 
   if (have < 1) {
     /* 22.09. (dritte Runde): Namen/Block-Codes/Sätze auf den damaligen Stand bringen, OHNE
@@ -188,7 +194,17 @@ async function ensureMigration() {
     }
   }
 
-  await DB.put('meta', { key: 'migration', value: 2 });
+  if (have < 3) {
+    /* 22.09. (vierte Runde, Teil 2): Profile umbenannt ("Standard" -> "Sarah",
+       "Neues Profil" -> "Alex"). Gleiche IDs bleiben erhalten, nur der Name ändert
+       sich -- Pläne/Zuordnung (profileId) sind davon unberührt. */
+    const renameProfile = { 'Standard': 'Sarah', 'Neues Profil': 'Alex' };
+    for (const p of S.profiles) {
+      if (renameProfile[p.name]) { p.name = renameProfile[p.name]; await DB.put('profiles', p); }
+    }
+  }
+
+  await DB.put('meta', { key: 'migration', value: 3 });
 }
 
 /* Fiktive Trainingshistorie anlegen - nur beim allerersten Start, nie erneut

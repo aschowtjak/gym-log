@@ -3,7 +3,7 @@
 Stand: 22.09.2026 (später Abend), nach dem Rückbau auf eine Seite, einer Feedback-Runde
 aus dem echten Betrieb (Deployment, Nutzung am Handy), einer zweiten Runde mit
 Layout-Umbau + neuen Features, einer dritten Runde mit der finalen Optik der
-Block-Karten und einer vierten Runde mit echten Funktionsänderungen in zwei Teilen:
+Block-Karten und einer vierten Runde mit echten Funktionsänderungen in drei Teilen:
 
 - **Teil 1:** Verlaufs-Chart entschlackt (keine Marker mehr, keine Status-Spalte), Haken
   bleiben nach dem Speichern erhalten, Datum ist editierbar inkl. rückwirkendem
@@ -15,10 +15,16 @@ Block-Karten und einer vierten Runde mit echten Funktionsänderungen in zwei Tei
   sondern blau (einzige Nicht-Grün-Farbe war unstimmig), Side Plank ohne
   „Sek."-Einheitentext, Dead Bugs ohne „/S."-Zusatz, und **Profile**: eine neue
   Gruppierungsebene über den Trainingsplänen (Icon im Topbar), damit mehrere komplett
-  getrennte Plan-Sets möglich sind. Siehe Abschnitt 9 für Details, Code-Stellen und
-  einen **offenen Punkt** (Inhalt des zweiten Profils fehlt noch).
+  getrennte Plan-Sets möglich sind.
+- **Teil 3 (direktes Folge-Feedback, gleicher Abend):** Profile benannt — **Sarah**
+  (bisherige zwei Pläne) und **Alex** (noch ohne Plan) — und die Profilwahl bleibt jetzt
+  über Neustarts hinweg gemerkt (`meta.profile`), statt bei jedem Laden auf das erste
+  Profil zurückzuspringen.
 
-Keine offenen Aufgaben aus `PROMPT.md` mehr, aber ein offener Punkt aus Teil 2 (s.o.).
+Siehe Abschnitt 9 für Details und Code-Stellen. Keine offenen Aufgaben aus `PROMPT.md`
+mehr, aber **ein offener Punkt**: Alex' Trainingsplan fehlt noch (Inhalt sollte laut
+Nutzer „analog zum anderen TP" sein, kam bis zu dieser Übergabe aber noch nicht — siehe
+Abschnitt 9, Teil 2/Punkt 6 und Teil 3, Ende).
 
 **⚠️ Offener Pull Request, noch nicht gemerged:**
 [github.com/aschowtjak/gym-log/pull/1](https://github.com/aschowtjak/gym-log/pull/1)
@@ -26,7 +32,8 @@ Keine offenen Aufgaben aus `PROMPT.md` mehr, aber ein offener Punkt aus Teil 2 (
 Block-Karten, die Finisher→Block-C-Zusammenlegung, den `nextBlock()`-Bugfix, die
 Stoppuhr, die finale Optik der Block-Karten samt Zeilen-Layout, Umbenennung „Tag A/B" →
 „Trainingseinheit 1/2", eine Migration für Bestandsdaten und (vierte Runde) editierbares
-Datum/rückwirkendes Bearbeiten, persistente Haken und die neue Chart-Verlauf-Seite.
+Datum/rückwirkendes Bearbeiten, persistente Haken, die neue Chart-Verlauf-Seite sowie
+Profile („Sarah"/„Alex", Profilwahl wird gemerkt).
 Solange der PR offen ist, weiterhin auf **diesem Branch** committen und pushen (nicht auf
 `master`), damit alles im selben PR landet:
 ```
@@ -86,7 +93,7 @@ Bestandsdaten in den anderen Stores bleiben unangetastet):
 | `profiles` | `id` | `{id, name, order}` — gruppiert Pläne (siehe Abschnitt 3/9) |
 | `plans` | `id` | `{id, name, order, profileId, items:[{exerciseId, block, targetSets, targetReps, hint}]}` |
 | `workouts` | `id` | `{id, date, startedAt, finishedAt, planId, planName, entries:[…], demo?:true}` |
-| `meta` | `key` | `seed`, `demoSeeded`, `draft`, `migration` |
+| `meta` | `key` | `seed`, `demoSeeded`, `draft`, `migration`, `profile` |
 
 Workout-Eintrag jetzt **deutlich schlanker** als vorher: `{exerciseId, block, weight, done}`.
 Kein `status`-String mehr, kein `up`-Feld, kein Altformat mit Einzelsätzen. `done` ist
@@ -118,14 +125,17 @@ als auch dem rückwirkenden Bearbeiten vergangener Einheiten (siehe Abschnitt 3)
 `planEdit` (Plan bearbeiten) und `history` (Liste aller gespeicherten Einheiten) —
 letztere beide nur über das Zahnrad-Menü erreichbar. Kein Tabbar.
 
-- **Profil-Icon** (⇄, Topbar links von Stoppuhr/Zahnrad, seit Teil 2 der vierten Runde):
-  `data-action="profile-switch"` → `switchProfile()` springt zum nächsten Eintrag in
-  `S.profiles` (aktuell genau zwei, siehe Abschnitt 9 — praktisch ein Umschalter), setzt
-  `S.day`/`S.histPlan` auf den ersten Plan des neuen Profils zurück und zeigt kurz einen
-  Toast mit dem Profilnamen. `#profBadge` (blau, `--acc2`) zeigt die ersten zwei
-  Buchstaben des aktiven Profils, wird in `render()` aktualisiert (liegt außerhalb von
-  `#app`, deshalb keine Neuerzeugung bei jedem Rendern nötig). Button selbst versteckt
-  sich, falls `S.profiles.length < 2`.
+- **Profil-Icon** (⇄, Topbar links von Stoppuhr/Zahnrad, seit Teil 2 der vierten Runde,
+  Profile seit Teil 3 „Sarah"/„Alex"): `data-action="profile-switch"` →
+  `switchProfile()` springt zum nächsten Eintrag in `S.profiles` (aktuell genau zwei,
+  siehe Abschnitt 9 — praktisch ein Umschalter), persistiert die Wahl in `meta.profile`
+  (seit Teil 3 — davor ephemer, sprang beim Neuladen immer auf das erste Profil zurück),
+  setzt `S.day`/`S.histPlan` auf den ersten Plan des neuen Profils zurück und zeigt kurz
+  einen Toast mit dem Profilnamen. `init()` liest `meta.profile` und verwendet die ID nur,
+  wenn sie zu einem noch existierenden Profil gehört. `#profBadge` (blau, `--acc2`) zeigt
+  die ersten zwei Buchstaben des aktiven Profils, wird in `render()` aktualisiert (liegt
+  außerhalb von `#app`, deshalb keine Neuerzeugung bei jedem Rendern nötig). Button selbst
+  versteckt sich, falls `S.profiles.length < 2`.
 - **Tagesumschalter** (`.daybar`) darunter: ein Button pro Plan **des aktuell gewählten
   Profils** (`plansOfProfile(S.profile)`, nicht mehr `S.plans` direkt — das ist jetzt die
   flache Liste über alle Profile hinweg). `S.day` hält die aktuell gewählte `planId`.
@@ -262,8 +272,10 @@ letztere beide nur über das Zahnrad-Menü erreichbar. Kein Tabbar.
   „Trainingseinheit 1/2", `block`/`targetSets`/`targetReps`/`hint` je Plan-Item mit der
   passenden `SEED_PLANS`-Zeile abgleichen, **nur** wenn der Übungsname exakt matcht);
   `have < 2` → Profile eingeführt: legt „Standard" an, falls es fehlt, und setzt
-  `profileId = Standard.id` auf jedem Plan, der noch keins hat. Danach `meta.migration =
-  2`. **Neue Migrationsschritte für spätere Runden:** einfach ein weiteres `if (have <
+  `profileId = Standard.id` auf jedem Plan, der noch keins hat; `have < 3` → Profile
+  umbenannt (`renameProfile`-Map „Standard"→„Sarah", „Neues Profil"→„Alex", analog zu
+  `renameEx`/`renamePlan`, IDs bleiben gleich). Danach `meta.migration = 3`. **Neue
+  Migrationsschritte für spätere Runden:** einfach ein weiteres `if (have <
   N)`-Bündel ergänzen und den finalen Wert am Ende erhöhen — alte Bündel laufen für
   Nutzer, die schon auf dem neuesten Stand sind, nicht erneut. **Reihenfolge
   Migration→Seed ist kritisch:** liefe `ensureSeed()` zuerst, würde es z.B. für jeden
@@ -508,7 +520,7 @@ lokal im Heim-WLAN (`python -m http.server 8099`, ohne HTTPS aber ohne Installie
 
 ---
 
-## 9. Vierte Runde (22.09., Abend): Verlauf/Charts, Haken-Reset, Datum, Verlauf-Seite (erledigt)
+## 9. Vierte Runde (22.09., Abend): Verlauf/Charts, Haken-Reset, Datum, Verlauf-Seite, Profile (Alex' Plan offen)
 
 ### Teil 1
 
@@ -573,20 +585,41 @@ genannt. Fünf sind erledigt, einer ist **offen** (siehe unten).
 5. **↑-Badge nicht mehr gelb.** `.up-badge{color:var(--acc2)}` statt `var(--warn)` — Blau
    ist im Rest der App bereits die etablierte Sekundärfarbe (Block-Überschriften, Chevron),
    Gelb war die einzige fremde Farbe im Bild.
-6. **Profile — OFFENER PUNKT.** Der Nutzer will einen dritten Trainingsplan, dafür aber
-   „echte Profile mit Plan-Gruppen" (nicht nur ein dritter Tab): zwei komplett getrennte
-   Sets von Trainingsplänen, umschaltbar über ein Icon im Topbar neben Stoppuhr/Zahnrad.
-   Datenmodell + Migration + UI sind fertig (neuer `profiles`-Store, `plans.profileId`,
-   `⇄`-Icon mit Badge, `switchProfile()` zyklisch durch `S.profiles` — siehe Abschnitt 2/3),
-   **aber**: das zweite Profil heißt aktuell nur `'Neues Profil'` (Platzhalter in
-   `SEED_PROFILES`, `js/seed.js`) und hat **keine Pläne** — der Nutzer wollte die Übungen
-   des neuen Plans selbst beschreiben, das kam in dieser Runde noch nicht. **Nächster
-   Schritt:** vom Nutzer Name des zweiten Profils + Name/Blöcke/Übungen/Sätze/Wdh./Hinweise
-   des neuen Plans erfragen, dann in `SEED_PLANS` als weiteren `['<Profilname>', '<Planname>',
-   [...]]`-Eintrag eintragen (Format wie die beiden „Standard"-Pläne) und `SEED_VERSION`
-   (aktuell 4) hochzählen, plus `SEED_PROFILES`-Eintrag `'Neues Profil'` in den echten Namen
-   umbenennen (zieht über `ensureSeed()`s Namens-Dedupe **nicht** automatisch nach — dafür
-   bräuchte es entweder eine neue `ensureMigration()`-Stufe (Profil umbenennen, analog zum
-   bestehenden `renamePlan`-Muster) oder man lässt „Neues Profil" stehen und ändert nur den
-   angezeigten Namen im `profiles`-Store direkt. Einfachster Weg: `renameProfile`-Map nach
-   demselben Muster wie `renameEx`/`renamePlan` in einer neuen Migrationsstufe `have < 3`.
+6. **Profile.** Der Nutzer will einen dritten Trainingsplan, dafür aber „echte Profile
+   mit Plan-Gruppen" (nicht nur ein dritter Tab): zwei komplett getrennte Sets von
+   Trainingsplänen, umschaltbar über ein Icon im Topbar neben Stoppuhr/Zahnrad.
+   Datenmodell + Migration + UI: neuer `profiles`-Store, `plans.profileId`, `⇄`-Icon mit
+   Badge, `switchProfile()` zyklisch durch `S.profiles` (siehe Abschnitt 2/3). Die beiden
+   Profile heißen **Sarah** (Sarahs bisherige zwei Pläne) und **Alex** (noch ohne Plan,
+   siehe Teil 3 unten).
+
+### Teil 3 — Profile benannt + Auswahl gemerkt, gleicher Abend
+
+Direktes Folge-Feedback zu Teil 2, Punkt 6:
+
+7. **Profile umbenannt.** „Standard" → „Sarah", „Neues Profil" → „Alex". `SEED_PROFILES`
+   in `js/seed.js` angepasst; für Bestandsinstallationen (die schon mit den alten Namen
+   liefen) eine neue Migrationsstufe `have < 3` in `ensureMigration()`: `renameProfile`-Map
+   nach demselben Muster wie `renameEx`/`renamePlan`, benennt vorhandene Profile anhand
+   ihres **alten** Namens um, IDs (und damit `plans.profileId`-Referenzen) bleiben
+   unverändert. `meta.migration` jetzt bei `3`. Getestet: sowohl der Upgrade-Pfad (alte
+   DB mit „Standard"/„Neues Profil") als auch der Neuinstallations-Pfad (SEED_PROFILES
+   direkt mit den neuen Namen) enden bei genau zwei Profilen „Sarah"/„Alex", keine
+   Duplikate — die drei Migrationsstufen laufen bei einer komplett leeren DB in einem
+   Rutsch hintereinander (Stufe 2 legt „Standard" testweise an, Stufe 3 benennt es im
+   selben `ensureMigration()`-Aufruf sofort in „Sarah" um, bevor `ensureSeed()` danach
+   prüft, ob der Name schon existiert).
+8. **Zuletzt gewähltes Profil bleibt über Neustarts hinweg aktiv.** War bisher ephemer
+   (`S.profile`, Default immer das erste Profil). Jetzt in `meta.profile` persistiert:
+   `switchProfile()` schreibt die gewählte `profileId` weg, `init()` liest sie und
+   verwendet sie **nur**, wenn die ID noch zu einem existierenden Profil gehört (sonst
+   Fallback aufs erste Profil — schützt z.B. gegen ein durch Backup-Import verändertes
+   Profil-Set).
+
+Kein neuer offener Punkt aus Teil 3. **Weiterhin offen aus Teil 2, Punkt 6:** Alex' Plan
+fehlt noch — der Nutzer beschreibt ihn „analog zum anderen TP" (Trainingsplan), war zum
+Zeitpunkt dieser Übergabe aber noch nicht da. Sobald er kommt: als weiteren
+`['Alex', '<Planname>', [...]]`-Eintrag in `SEED_PLANS` eintragen (gleiches Format wie
+Sarahs zwei Pläne) und `SEED_VERSION` (aktuell 4) hochzählen, keine weitere
+Migrationsstufe nötig (Alex' Profil existiert schon, `ensureSeed()` legt fehlende Pläne
+für ein bestehendes Profil ganz normal an).

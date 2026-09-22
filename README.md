@@ -17,8 +17,9 @@ Schrittweite vor.
 ## Eine Seite
 
 - Im Topbar ein Icon **Profil wechseln** (⇄, neben Stoppuhr und Menü) — Profile
-  gruppieren komplett eigene Sätze von Trainingsplänen (z.B. verschiedene
-  Trainingsphasen), jedes Profil hat seinen eigenen Tagesumschalter darunter.
+  (**Sarah** / **Alex**) gruppieren komplett eigene Sätze von Trainingsplänen, jedes
+  Profil hat seinen eigenen Tagesumschalter darunter. Merkt sich das zuletzt gewählte
+  Profil über Neustarts hinweg.
 - Darunter ein Umschalter **Trainingseinheit 1 / 2** (Pläne des aktuellen Profils).
   Direkt darunter ein **editierbares Datum** (heute vorausgewählt, springt beim
   Verlassen der Hauptseite wieder auf heute) plus ein Dropdown mit vergangenen

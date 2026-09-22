@@ -40,17 +40,17 @@ const SEED_EXERCISES = [
   ['Beinheben', 'Rumpf', 'x'], ['Bauchpresse (Maschine)', 'Rumpf', 'kg'],
 ];
 
-/* Profile gruppieren Trainingspläne (z.B. verschiedene Trainingsphasen/-programme).
-   Der Nutzer wechselt über ein Icon im Topbar zwischen ihnen; jedes Profil hat seine
-   eigenen Pläne/Tabs. "Neues Profil" ist aktuell ein leerer Platzhalter, bis der
-   zugehörige Plan feststeht (siehe HANDOVER.md Abschnitt 9). */
-const SEED_PROFILES = ['Standard', 'Neues Profil'];
+/* Profile gruppieren Trainingspläne (z.B. verschiedene Personen). Der Nutzer wechselt
+   über ein Icon im Topbar zwischen ihnen; jedes Profil hat seine eigenen Pläne/Tabs.
+   "Alex" ist aktuell ein leerer Platzhalter, bis der zugehörige Plan feststeht (analog
+   zu Sarahs Plan -- siehe HANDOVER.md Abschnitt 9). */
+const SEED_PROFILES = ['Sarah', 'Alex'];
 
 /* [Profil, Plan, [Block, Übung, Sätze, Wiederholungen, Hinweis]]
    Sätze sind je Block einheitlich 3 (steht in der Block-Überschrift) -- ehemalige Ausreißer
    (Beinpresse 4, Hip Thrust 4, Seated Leg Curl 2–3, Hyperextensions 2–3) auf 3 vereinheitlicht. */
 const SEED_PLANS = [
-  ['Standard', 'Trainingseinheit 1', [
+  ['Sarah', 'Trainingseinheit 1', [
     ['A1', 'Beinpresse einbeinig', '3', '5–8', '≤90°, explosiv hoch, RIR 2–3'],
     ['A2', 'Brustpresse', '3', '8–12', ''],
     ['A3', 'Band Pull-Aparts', '3', '15–20', 'aktive Pause'],
@@ -61,7 +61,7 @@ const SEED_PLANS = [
     ['C2', 'Wadenheben (Maschine)', '3', '10–15', ''],
     ['C3', 'Woodchopper', '3', '6–8/S.', 'explosiv'],
   ]],
-  ['Standard', 'Trainingseinheit 2', [
+  ['Sarah', 'Trainingseinheit 2', [
     ['A1', 'Hip Thrust Maschine', '3', '5–8', 'explosiv hoch'],
     ['A2', 'Schulterpresse', '3', '8–12', 'schmerzfrei'],
     ['A3', 'Kabel-Außenrotation', '3', '12–15', '90/90, ersetzt Bird-Dog'],
