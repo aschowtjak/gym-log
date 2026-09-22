@@ -1,8 +1,8 @@
 /* Minimaler IndexedDB-Wrapper. Alle Daten bleiben auf dem Gerät. */
 const DB = (function () {
   const NAME = 'gymlog';
-  const VERSION = 1;
-  const STORES = { exercises: 'id', plans: 'id', workouts: 'id', meta: 'key' };
+  const VERSION = 2;
+  const STORES = { exercises: 'id', plans: 'id', workouts: 'id', meta: 'key', profiles: 'id' };
   let db = null;
 
   function open() {

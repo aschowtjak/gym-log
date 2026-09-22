@@ -9,6 +9,8 @@ const S = {
   view: 'main',            // 'main' | 'planEdit'
   exercises: [],
   plans: [],
+  profiles: [],              // gruppieren Pläne, z.B. verschiedene Trainingsprogramme
+  profile: null,              // aktuell gewähltes Profil (nicht persistiert, Default = erstes)
   workouts: [],             // neueste zuerst
   day: null,                 // aktuell gewählte planId
   draft: {},                 // { [planId]: { _date, [exerciseId]: {weight, done} } }
@@ -34,10 +36,11 @@ const fmtDate = (iso) => new Date(iso + 'T12:00:00').toLocaleDateString('de-DE',
 const fmtFullDate = (iso) => new Date(iso + 'T12:00:00').toLocaleDateString('de-DE', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' });
 const fmtKg = (v) => (Math.round(v * 100) / 100).toLocaleString('de-DE');
 
-const UNITS = { kg: 'kg', s: 'Sek.', x: '' };
+const UNITS = { kg: 'kg', s: '', x: '' };
 const unitOf = (id) => { const e = S.exercises.find((x) => x.id === id); return (e && e.unit) || 'kg'; };
 const exName = (id) => { const e = S.exercises.find((x) => x.id === id); return e ? e.name : 'Übung'; };
 const exByName = (n) => S.exercises.find((e) => e.name === n);
+const plansOfProfile = (profileId) => S.plans.filter((p) => p.profileId === profileId);
 /* Blockgruppierung für die Übersicht: "A1"/"A2"/"A3" -> Gruppe "A" ("Block A"),
    "Finisher" bleibt eine eigene Gruppe mit ihrem Namen als Überschrift. */
 const grpKey = (block) => (/^[A-Za-z]\d+$/.test(block || '') ? block[0].toUpperCase() : (block || '–'));
@@ -55,6 +58,7 @@ async function init() {
   await DB.open();
   S.exercises = await DB.all('exercises');
   S.plans = await DB.all('plans');
+  S.profiles = await DB.all('profiles');
   S.workouts = (await DB.all('workouts')).sort(byDateDesc);
 
   await ensureMigration();
@@ -64,8 +68,10 @@ async function init() {
   const draftRec = await DB.get('meta', 'draft');
   if (draftRec && draftRec.value) S.draft = draftRec.value;
 
-  sortExercises(); sortPlans();
-  if (S.plans.length) S.day = S.plans[0].id;
+  sortExercises(); sortPlans(); sortProfiles();
+  if (S.profiles.length) S.profile = S.profiles[0].id;
+  const myPlans = plansOfProfile(S.profile);
+  if (myPlans.length) S.day = myPlans[0].id;
 
   bindEvents();
   render();
@@ -78,8 +84,25 @@ async function init() {
 const byDateDesc = (a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : (b.startedAt || 0) - (a.startedAt || 0));
 function sortExercises() { S.exercises.sort((a, b) => a.name.localeCompare(b.name, 'de')); }
 function sortPlans() { S.plans.sort((a, b) => (a.order || 0) - (b.order || 0)); }
+function sortProfiles() { S.profiles.sort((a, b) => (a.order || 0) - (b.order || 0)); }
 
-/* Übungskatalog + Pläne Tag A / Tag B anlegen (einmalig, versioniert). */
+/* Icon im Topbar: springt zum nächsten Profil (aktuell genau zwei, daher praktisch ein
+   Umschalter). S.day/S.histPlan werden auf den ersten Plan des neuen Profils zurückgesetzt,
+   da sie zum vorherigen Profil gehörten. */
+function switchProfile() {
+  if (S.profiles.length < 2) return;
+  const i = S.profiles.findIndex((p) => p.id === S.profile);
+  const next = S.profiles[(i + 1) % S.profiles.length];
+  S.profile = next.id;
+  const myPlans = plansOfProfile(S.profile);
+  S.day = myPlans.length ? myPlans[0].id : null;
+  S.histPlan = null;
+  S.openKey = null;
+  render();
+  toast('Profil: ' + next.name, 1800);
+}
+
+/* Übungskatalog + Profile + Pläne anlegen (einmalig, versioniert). */
 async function ensureSeed() {
   const rec = await DB.get('meta', 'seed');
   const have = rec ? rec.value : 0;
@@ -93,10 +116,20 @@ async function ensureSeed() {
     }
   }
 
-  for (const [name, rows] of SEED_PLANS) {
+  for (const pname of SEED_PROFILES) {
+    if (!S.profiles.some((p) => p.name === pname)) {
+      const prof = { id: uid(), name: pname, order: S.profiles.length };
+      S.profiles.push(prof);
+      await DB.put('profiles', prof);
+    }
+  }
+
+  for (const [profileName, name, rows] of SEED_PLANS) {
     if (S.plans.some((p) => p.name === name)) continue;
+    const profile = S.profiles.find((p) => p.name === profileName);
     const plan = {
-      id: uid(), name, order: S.plans.length,
+      id: uid(), name, profileId: (profile || {}).id,
+      order: plansOfProfile((profile || {}).id).length,
       items: rows.map(([block, ex, sets, reps, hint]) => ({
         exerciseId: (exByName(ex) || {}).id, block, targetSets: sets, targetReps: reps, hint,
       })).filter((it) => it.exerciseId),
@@ -110,31 +143,52 @@ async function ensureSeed() {
 
 /* Einmaliger Nachzieh-Schritt für Bestandsinstallationen: ensureSeed() legt Übungen/Pläne nur
    an, rührt aber nie an bereits vorhandenen (sonst würden eigene Planänderungen überschrieben).
-   Diese Migration bringt Namen/Block-Codes/Sätze auf den 22.09.-Stand, OHNE eigene Ergänzungen
-   des Nutzers (z.B. selbst hinzugefügte Übungen) anzutasten: nur Positionen, die exakt einer
-   Zeile aus SEED_PLANS entsprechen (per Übungsname im selben Plan), werden aktualisiert. */
+   Versioniert (`meta.migration`), damit spätere Runden weitere Schritte nachliefern können,
+   ohne bereits erledigte erneut auszuführen. */
 async function ensureMigration() {
   const rec = await DB.get('meta', 'migration');
-  if (rec && rec.value >= 1) return;
+  const have = rec ? rec.value : 0;
+  if (have >= 2) return;
 
-  const renameEx = { 'Beinpresse einbeinig (≤90°)': 'Beinpresse einbeinig', 'Kabel-Außenrotation (90/90)': 'Kabel-Außenrotation' };
-  for (const e of S.exercises) {
-    if (renameEx[e.name]) { e.name = renameEx[e.name]; await DB.put('exercises', e); }
+  if (have < 1) {
+    /* 22.09. (dritte Runde): Namen/Block-Codes/Sätze auf den damaligen Stand bringen, OHNE
+       eigene Ergänzungen des Nutzers (z.B. selbst hinzugefügte Übungen) anzutasten -- nur
+       Positionen, die exakt einer Zeile aus SEED_PLANS entsprechen (per Übungsname im
+       selben Plan), werden aktualisiert. */
+    const renameEx = { 'Beinpresse einbeinig (≤90°)': 'Beinpresse einbeinig', 'Kabel-Außenrotation (90/90)': 'Kabel-Außenrotation' };
+    for (const e of S.exercises) {
+      if (renameEx[e.name]) { e.name = renameEx[e.name]; await DB.put('exercises', e); }
+    }
+
+    const renamePlan = { 'Tag A': 'Trainingseinheit 1', 'Tag B': 'Trainingseinheit 2' };
+    for (const p of S.plans) {
+      if (renamePlan[p.name]) p.name = renamePlan[p.name];
+      const seedPlan = SEED_PLANS.find((sp) => sp[1] === p.name);
+      const seedRows = seedPlan ? seedPlan[2] : [];
+      p.items.forEach((it) => {
+        const row = seedRows.find((r) => r[1] === exName(it.exerciseId));
+        if (!row) return;
+        it.block = row[0]; it.targetSets = row[2]; it.targetReps = row[3]; it.hint = row[4];
+      });
+      await DB.put('plans', p);
+    }
   }
 
-  const renamePlan = { 'Tag A': 'Trainingseinheit 1', 'Tag B': 'Trainingseinheit 2' };
-  for (const p of S.plans) {
-    if (renamePlan[p.name]) p.name = renamePlan[p.name];
-    const seedRows = ((SEED_PLANS.find((sp) => sp[0] === p.name) || [])[1]) || [];
-    p.items.forEach((it) => {
-      const row = seedRows.find((r) => r[1] === exName(it.exerciseId));
-      if (!row) return;
-      it.block = row[0]; it.targetSets = row[2]; it.targetReps = row[3]; it.hint = row[4];
-    });
-    await DB.put('plans', p);
+  if (have < 2) {
+    /* 22.09. (vierte Runde): Profile eingeführt. Bestandsinstallationen kannten noch keine --
+       alle vorhandenen Pläne gehören ins "Standard"-Profil, das dafür ggf. neu angelegt wird. */
+    let std = S.profiles.find((p) => p.name === 'Standard');
+    if (!std) {
+      std = { id: uid(), name: 'Standard', order: 0 };
+      S.profiles.push(std);
+      await DB.put('profiles', std);
+    }
+    for (const p of S.plans) {
+      if (!p.profileId) { p.profileId = std.id; await DB.put('plans', p); }
+    }
   }
 
-  await DB.put('meta', { key: 'migration', value: 1 });
+  await DB.put('meta', { key: 'migration', value: 2 });
 }
 
 /* Fiktive Trainingshistorie anlegen - nur beim allerersten Start, nie erneut
@@ -229,24 +283,38 @@ function seriesFor(exId, planId) {
 const TITLES = { main: 'Training', planEdit: 'Plan bearbeiten', history: 'Verlauf' };
 const BACKABLE = { planEdit: 'main', history: 'main' };
 
-function nav(view) { S.view = view; window.scrollTo(0, 0); render(); }
+/* Beim Wechsel auf die Hauptseite von einer anderen Ansicht springt das Datum immer auf
+   heute zurück -- rückwirkendes Bearbeiten ist als kurzer Ausflug gedacht, kein Modus,
+   der über Navigation hinweg hängen bleibt. */
+function nav(view) {
+  if (view === 'main' && S.view !== 'main') S.dates = {};
+  S.view = view; window.scrollTo(0, 0); render();
+}
 
 function render() {
   const v = S.view;
   $('#title').textContent = TITLES[v] || 'Training';
   $('#backBtn').classList.toggle('hidden', !BACKABLE[v]);
-  $('#savebar').classList.toggle('hidden', v !== 'main' || !S.plans.length);
+  $('#savebar').classList.toggle('hidden', v !== 'main' || !plansOfProfile(S.profile).length);
+
+  $('.prof-btn').classList.toggle('hidden', S.profiles.length < 2);
+  const prof = S.profiles.find((p) => p.id === S.profile);
+  const profBadge = $('#profBadge');
+  if (prof) { profBadge.textContent = prof.name.slice(0, 2).toUpperCase(); profBadge.classList.remove('hidden'); }
+  else profBadge.classList.add('hidden');
+
   $('#app').innerHTML = v === 'planEdit' ? viewPlanEdit() : v === 'history' ? viewHistory() : viewMain();
 }
 
 /* ---------------- Hauptseite ---------------- */
 function viewMain() {
-  if (!S.plans.length) return '<div class="empty">Noch kein Plan angelegt.</div>';
-  if (!S.day || !S.plans.some((p) => p.id === S.day)) S.day = S.plans[0].id;
-  const plan = S.plans.find((p) => p.id === S.day);
+  const myPlans = plansOfProfile(S.profile);
+  if (!myPlans.length) return '<div class="empty">Noch kein Plan in diesem Profil angelegt.</div>';
+  if (!S.day || !myPlans.some((p) => p.id === S.day)) S.day = myPlans[0].id;
+  const plan = myPlans.find((p) => p.id === S.day);
   ensureDraft(plan.id);
 
-  let h = '<div class="daybar">' + S.plans.map((p) =>
+  let h = '<div class="daybar">' + myPlans.map((p) =>
     '<button class="dayseg' + (p.id === S.day ? ' on' : '') + '" data-action="day" data-id="' + p.id + '">' +
     esc(p.name) + '</button>').join('') + '</div>';
 
@@ -430,7 +498,7 @@ function openMenu() {
     '<span class="mut sm">' + S.workouts.length + (S.workouts.length === 1 ? ' Einheit gespeichert' : ' Einheiten gespeichert') +
     '</span></div><span class="chev">›</span></div>';
   h += '<div class="sec-title">Pläne</div>';
-  S.plans.forEach((p) => {
+  plansOfProfile(S.profile).forEach((p) => {
     h += '<div class="item" data-action="plan-edit" data-id="' + p.id + '">' +
       '<div class="grow"><strong class="ellip">' + esc(p.name) + '</strong>' +
       '<span class="mut sm">' + p.items.length + ' Übungen</span></div><span class="chev">›</span></div>';
@@ -471,11 +539,12 @@ function filterSeries(pts, filter) {
    mit Kurve + Tabelle für den gewählten Zeitraum/Umfang (statt der früheren flachen,
    nach Monat gruppierten Sitzungsliste). */
 function viewHistory() {
-  if (!S.plans.length) return '<div class="empty">Noch kein Plan angelegt.</div>';
-  if (!S.histPlan || !S.plans.some((p) => p.id === S.histPlan)) S.histPlan = S.day || S.plans[0].id;
-  const plan = S.plans.find((p) => p.id === S.histPlan);
+  const myPlans = plansOfProfile(S.profile);
+  if (!myPlans.length) return '<div class="empty">Noch kein Plan in diesem Profil angelegt.</div>';
+  if (!S.histPlan || !myPlans.some((p) => p.id === S.histPlan)) S.histPlan = S.day || myPlans[0].id;
+  const plan = myPlans.find((p) => p.id === S.histPlan);
 
-  let h = '<div class="daybar">' + S.plans.map((p) =>
+  let h = '<div class="daybar">' + myPlans.map((p) =>
     '<button class="dayseg' + (p.id === S.histPlan ? ' on' : '') + '" data-action="hist-plan" data-id="' + p.id + '">' +
     esc(p.name) + '</button>').join('') + '</div>';
 
@@ -701,8 +770,8 @@ function closeModal() { $('#modal').classList.add('hidden'); $('#modalBox').inne
 /* ---------------- Export / Import ---------------- */
 async function exportData() {
   const data = {
-    app: 'gymlog', version: 3, exportedAt: new Date().toISOString(),
-    exercises: S.exercises, plans: S.plans, workouts: S.workouts,
+    app: 'gymlog', version: 4, exportedAt: new Date().toISOString(),
+    exercises: S.exercises, profiles: S.profiles, plans: S.plans, workouts: S.workouts,
   };
   const blob = new Blob([JSON.stringify(data, null, 1)], { type: 'application/json' });
   const a = document.createElement('a');
@@ -724,6 +793,7 @@ function importData() {
       if (!confirm('Backup vom ' + (d.exportedAt || '').slice(0, 10) + ' einspielen?\nAlle aktuellen Daten werden ersetzt.')) return;
       for (const s of DB.stores) await DB.clear(s);
       await DB.putAll('exercises', d.exercises || []);
+      await DB.putAll('profiles', d.profiles || []);
       await DB.putAll('plans', d.plans || []);
       await DB.putAll('workouts', d.workouts || []);
       await DB.put('meta', { key: 'seed', value: SEED_VERSION });
@@ -759,6 +829,7 @@ function onClick(ev) {
     case 'back': nav(BACKABLE[S.view] || 'main'); break;
     case 'modal-close': closeModal(); break;
 
+    case 'profile-switch': switchProfile(); break;
     case 'stopwatch': openStopwatch(); break;
     case 'sw-start': swStart(); break;
     case 'sw-pause': swPause(); break;

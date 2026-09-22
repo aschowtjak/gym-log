@@ -33,9 +33,12 @@ const Chart = (function () {
     const ys = points.map((p) => p.y);
     const sc = niceScale(Math.min(...ys), Math.max(...ys));
     const t0 = points[0].t, t1 = points[points.length - 1].t;
-    const span = Math.max(1, t1 - t0);
 
-    const X = (t) => PL + ((t - t0) / span) * (W - PL - PR);
+    /* X-Position nach Trainingsindex, nicht nach Kalenderdatum: sonst verzerrt ein
+       ausgelassenes oder zusätzlich eingeschobenes Training den Kurvenverlauf (großer
+       zeitlicher Abstand ≠ großer Fortschritt). Die Datumsbeschriftung unten zeigt
+       weiterhin den echten ersten/letzten Tag. */
+    const X = (i) => PL + (points.length > 1 ? (i / (points.length - 1)) * (W - PL - PR) : 0);
     const Y = (v) => PT + (1 - (v - sc.lo) / (sc.hi - sc.lo)) * (H - PT - PB);
 
     let grid = '';
@@ -47,7 +50,7 @@ const Chart = (function () {
         fmtNum(v) + '</text>';
     }
 
-    const coords = points.map((p) => [X(p.t), Y(p.y)]);
+    const coords = points.map((p, i) => [X(i), Y(p.y)]);
     const path = coords.map((c, i) => (i ? 'L' : 'M') + c[0].toFixed(1) + ' ' + c[1].toFixed(1)).join(' ');
     const area = path + ' L' + coords[coords.length - 1][0].toFixed(1) + ' ' + (H - PB) +
       ' L' + coords[0][0].toFixed(1) + ' ' + (H - PB) + ' Z';

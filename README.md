@@ -16,8 +16,12 @@ Schrittweite vor.
 
 ## Eine Seite
 
-- Oben ein Umschalter **Trainingseinheit 1 / 2** — mehr Pläne gibt es nicht. Darunter
-  ein **editierbares Datum** (heute vorausgewählt) plus ein Dropdown mit vergangenen
+- Im Topbar ein Icon **Profil wechseln** (⇄, neben Stoppuhr und Menü) — Profile
+  gruppieren komplett eigene Sätze von Trainingsplänen (z.B. verschiedene
+  Trainingsphasen), jedes Profil hat seinen eigenen Tagesumschalter darunter.
+- Darunter ein Umschalter **Trainingseinheit 1 / 2** (Pläne des aktuellen Profils).
+  Direkt darunter ein **editierbares Datum** (heute vorausgewählt, springt beim
+  Verlassen der Hauptseite wieder auf heute) plus ein Dropdown mit vergangenen
   Einheiten dieses Plans — beides setzt dasselbe Datum. Ist ein anderes Datum als heute
   gewählt, zeigt die Seite genau diese Einheit zum **rückwirkenden Bearbeiten**: Felder
   füllen sich mit den damals gespeicherten Werten, „Einheit speichern" überschreibt sie.
@@ -30,6 +34,8 @@ Schrittweite vor.
   dass letztes Mal schon alles geschafft war.
 - Tippen auf eine Übungszeile (erkennbar am **›**) klappt ihre Historie auf: letzte
   Einheiten als scrollbare Tabelle plus Fortschrittskurve (reine Linie, ohne Punkte).
+  Die Kurve ist nach **Trainingsindex** gezeichnet, nicht nach Kalenderdatum — ein
+  ausgelassenes oder zusätzliches Training verzerrt den Verlauf dadurch nicht.
 - Unten ein Knopf **„Einheit speichern"** — übernimmt alle angezeigten Gewichte für das
   gewählte Datum, auch unveränderte. Ein zweites Speichern desselben Datums überschreibt
   den vorhandenen Eintrag, statt einen zweiten anzulegen; die Haken bleiben dabei
@@ -40,9 +46,12 @@ Schrittweite vor.
   einen Tabelleneintrag öffnet die ganze Einheit dieses Tages inkl. Löschen), Plan
   bearbeiten, Backup und Demodaten löschen.
 
-**Nur Übungen mit Zusatzgewicht werden protokolliert.** Band Pull-Aparts, Dead Bugs,
-Side Plank und Hyperextensions stehen im Plan, haben aber kein Eingabefeld — nur die
-Wiederholungszahl als Text, gleiche Stelle wie die Pille bei den anderen Übungen.
+**Nur Übungen mit Zusatzgewicht (oder Zeit) werden protokolliert.** Band Pull-Aparts,
+Dead Bugs und Hyperextensions haben kein Eingabefeld — nur die Wiederholungszahl als
+Text, gleiche Stelle wie die Pille bei den anderen Übungen. Side Plank hat dagegen ein
+Eingabefeld wie eine Gewichtsübung, nur ohne Einheitentext daneben (Sekunden statt kg
+versteht sich von selbst) — die Zeit wird mit der Stoppuhr gestoppt und von Hand
+eingetragen.
 **Trainingseinheit 1 und 2 sind strikt getrennt** — dieselbe Übung (z.B. Hip Thrust
 Maschine) hat in beiden Einheiten ein eigenes Arbeitsgewicht und eine eigene Historie.
 Nur Übungen ganz ohne Gewicht (keine Historie, nichts eingetragen) und ohne Haken
@@ -105,8 +114,8 @@ Löschen der Browserdaten bzw. Deinstallieren der App löscht auch die Trainings
 ```
 index.html               App-Shell (Topbar, Container, Speichern-Leiste, Modal)
 css/style.css             komplettes Design, Dark Theme
-js/db.js                  IndexedDB-Wrapper (exercises, plans, workouts, meta)
-js/seed.js                Übungskatalog, Pläne Trainingseinheit 1 / 2, Demodaten-Rezept
+js/db.js                  IndexedDB-Wrapper (exercises, profiles, plans, workouts, meta)
+js/seed.js                Übungskatalog, Profile + Pläne, Demodaten-Rezept
 js/chart.js                abhängigkeitsfreies SVG-Liniendiagramm
 js/app.js                  State, Views, Speicherlogik
 manifest.webmanifest      PWA-Manifest (Name, Icons, Standalone-Modus)
@@ -121,4 +130,4 @@ Keine Build-Schritte, keine Abhängigkeiten — Dateien ändern, neu laden, fert
 Der Service Worker liefert die gecachte Version sofort aus und lädt die neue im
 Hintergrund (stale-while-revalidate): Nach einem Deploy ist die Änderung beim
 übernächsten Start aktiv. Soll sie sofort greifen, in `sw.js` die Zeile
-`const CACHE = 'gymlog-v9'` (aktueller Stand) hochzählen.
+`const CACHE = 'gymlog-v10'` (aktueller Stand) hochzählen.

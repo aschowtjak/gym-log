@@ -40,22 +40,28 @@ const SEED_EXERCISES = [
   ['Beinheben', 'Rumpf', 'x'], ['Bauchpresse (Maschine)', 'Rumpf', 'kg'],
 ];
 
-/* [Block, Übung, Sätze, Wiederholungen, Hinweis]
+/* Profile gruppieren Trainingspläne (z.B. verschiedene Trainingsphasen/-programme).
+   Der Nutzer wechselt über ein Icon im Topbar zwischen ihnen; jedes Profil hat seine
+   eigenen Pläne/Tabs. "Neues Profil" ist aktuell ein leerer Platzhalter, bis der
+   zugehörige Plan feststeht (siehe HANDOVER.md Abschnitt 9). */
+const SEED_PROFILES = ['Standard', 'Neues Profil'];
+
+/* [Profil, Plan, [Block, Übung, Sätze, Wiederholungen, Hinweis]]
    Sätze sind je Block einheitlich 3 (steht in der Block-Überschrift) -- ehemalige Ausreißer
    (Beinpresse 4, Hip Thrust 4, Seated Leg Curl 2–3, Hyperextensions 2–3) auf 3 vereinheitlicht. */
 const SEED_PLANS = [
-  ['Trainingseinheit 1', [
+  ['Standard', 'Trainingseinheit 1', [
     ['A1', 'Beinpresse einbeinig', '3', '5–8', '≤90°, explosiv hoch, RIR 2–3'],
     ['A2', 'Brustpresse', '3', '8–12', ''],
     ['A3', 'Band Pull-Aparts', '3', '15–20', 'aktive Pause'],
     ['B1', 'Hip Thrust Maschine', '3', '8–12', ''],
     ['B2', 'Latzug', '3', '8–12', ''],
-    ['B3', 'Dead Bugs', '3', '10/S.', 'aktive Pause'],
+    ['B3', 'Dead Bugs', '3', '10', 'aktive Pause'],
     ['C1', 'Seated Leg Curl', '3', '10–15', '3 s exzentrisch'],
     ['C2', 'Wadenheben (Maschine)', '3', '10–15', ''],
     ['C3', 'Woodchopper', '3', '6–8/S.', 'explosiv'],
   ]],
-  ['Trainingseinheit 2', [
+  ['Standard', 'Trainingseinheit 2', [
     ['A1', 'Hip Thrust Maschine', '3', '5–8', 'explosiv hoch'],
     ['A2', 'Schulterpresse', '3', '8–12', 'schmerzfrei'],
     ['A3', 'Kabel-Außenrotation', '3', '12–15', '90/90, ersetzt Bird-Dog'],
@@ -69,7 +75,7 @@ const SEED_PLANS = [
 ];
 
 /* Wird hochgezählt, wenn neue Startdaten nachgeliefert werden sollen. */
-const SEED_VERSION = 3;
+const SEED_VERSION = 4;
 
 /* ---------------- Demodaten ----------------
    Fiktive Trainingshistorie, damit sich die App beim ersten Öffnen wie an einem

@@ -1,13 +1,24 @@
 # Übergabe: Gym Log
 
-Stand: 22.09.2026 (Abend), nach dem Rückbau auf eine Seite, einer Feedback-Runde aus dem
-echten Betrieb (Deployment, Nutzung am Handy), einer zweiten Runde mit Layout-Umbau + neuen
-Features, einer dritten Runde mit der finalen Optik der Block-Karten und einer vierten
-Runde mit echten Funktionsänderungen: Verlaufs-Chart entschlackt (keine Marker mehr, keine
-Status-Spalte), Haken bleiben nach dem Speichern erhalten, Datum ist editierbar inkl.
-rückwirkendem Bearbeiten vergangener Einheiten, und die Verlauf-Seite zeigt jetzt
-Fortschritts-Charts pro Übung statt einer flachen Sitzungsliste (siehe Abschnitt 9 für
-Details und Code-Stellen). Keine offenen Aufgaben aus `PROMPT.md` mehr.
+Stand: 22.09.2026 (später Abend), nach dem Rückbau auf eine Seite, einer Feedback-Runde
+aus dem echten Betrieb (Deployment, Nutzung am Handy), einer zweiten Runde mit
+Layout-Umbau + neuen Features, einer dritten Runde mit der finalen Optik der
+Block-Karten und einer vierten Runde mit echten Funktionsänderungen in zwei Teilen:
+
+- **Teil 1:** Verlaufs-Chart entschlackt (keine Marker mehr, keine Status-Spalte), Haken
+  bleiben nach dem Speichern erhalten, Datum ist editierbar inkl. rückwirkendem
+  Bearbeiten vergangener Einheiten, Verlauf-Seite zeigt Fortschritts-Charts pro Übung
+  statt einer flachen Sitzungsliste.
+- **Teil 2 (Live-Test-Feedback direkt danach):** Kurve nach Trainingsindex statt
+  Kalenderdatum (kein Verzerren bei ausgelassenen/zusätzlichen Trainings), Datumsfeld
+  springt beim Verlassen der Hauptseite auf heute zurück, ↑-Badge nicht mehr gelb
+  sondern blau (einzige Nicht-Grün-Farbe war unstimmig), Side Plank ohne
+  „Sek."-Einheitentext, Dead Bugs ohne „/S."-Zusatz, und **Profile**: eine neue
+  Gruppierungsebene über den Trainingsplänen (Icon im Topbar), damit mehrere komplett
+  getrennte Plan-Sets möglich sind. Siehe Abschnitt 9 für Details, Code-Stellen und
+  einen **offenen Punkt** (Inhalt des zweiten Profils fehlt noch).
+
+Keine offenen Aufgaben aus `PROMPT.md` mehr, aber ein offener Punkt aus Teil 2 (s.o.).
 
 **⚠️ Offener Pull Request, noch nicht gemerged:**
 [github.com/aschowtjak/gym-log/pull/1](https://github.com/aschowtjak/gym-log/pull/1)
@@ -51,10 +62,10 @@ Einzelsätze.
 ### Dateien
 
 ```
-index.html               App-Shell: Topbar, Container, Speichern-Leiste, Modal
+index.html               App-Shell: Topbar (Profil/Stoppuhr/Menü), Container, Speichern-Leiste, Modal
 css/style.css             gesamtes Design, CSS-Variablen, Dark Theme
 js/db.js                  IndexedDB-Wrapper: open/all/get/put/del/clear/putAll
-js/seed.js                Übungskatalog, Pläne Trainingseinheit 1 / 2, Demodaten-Rezept
+js/seed.js                Übungskatalog, Profile (SEED_PROFILES) + Pläne (SEED_PLANS), Demodaten-Rezept
 js/chart.js                abhängigkeitsfreies SVG-Liniendiagramm (Chart.line)
 js/app.js                  State, Views, Speicherlogik, Events
 manifest.webmanifest      PWA-Manifest
@@ -65,14 +76,17 @@ README.md                 Funktionsbeschreibung + Deployment-Anleitung
 
 ### Datenmodell
 
-IndexedDB `gymlog`, vier Stores (unverändert gegenüber der Vorversion):
+IndexedDB `gymlog`, fünf Stores (`profiles` neu seit Teil 2 der vierten Runde,
+DB-`VERSION` deshalb 1→2 in `js/db.js` — `onupgradeneeded` legt fehlende Stores nach,
+Bestandsdaten in den anderen Stores bleiben unangetastet):
 
 | Store | keyPath | Inhalt |
 |---|---|---|
 | `exercises` | `id` | `{id, name, muscle, unit}` — `unit`: `kg` / `s` / `x` (ohne Gewicht) |
-| `plans` | `id` | `{id, name, order, items:[{exerciseId, block, targetSets, targetReps, hint}]}` |
+| `profiles` | `id` | `{id, name, order}` — gruppiert Pläne (siehe Abschnitt 3/9) |
+| `plans` | `id` | `{id, name, order, profileId, items:[{exerciseId, block, targetSets, targetReps, hint}]}` |
 | `workouts` | `id` | `{id, date, startedAt, finishedAt, planId, planName, entries:[…], demo?:true}` |
-| `meta` | `key` | `seed`, `demoSeeded`, `draft` |
+| `meta` | `key` | `seed`, `demoSeeded`, `draft`, `migration` |
 
 Workout-Eintrag jetzt **deutlich schlanker** als vorher: `{exerciseId, block, weight, done}`.
 Kein `status`-String mehr, kein `up`-Feld, kein Altformat mit Einzelsätzen. `done` ist
@@ -104,9 +118,17 @@ als auch dem rückwirkenden Bearbeiten vergangener Einheiten (siehe Abschnitt 3)
 `planEdit` (Plan bearbeiten) und `history` (Liste aller gespeicherten Einheiten) —
 letztere beide nur über das Zahnrad-Menü erreichbar. Kein Tabbar.
 
-- **Tagesumschalter** (`.daybar`) oben: ein Button pro Plan (`S.plans`), erwartet genau
-  zwei Pläne (Trainingseinheit 1 / 2, bis 22.09. „Tag A/B"). `S.day` hält die aktuell
-  gewählte `planId`.
+- **Profil-Icon** (⇄, Topbar links von Stoppuhr/Zahnrad, seit Teil 2 der vierten Runde):
+  `data-action="profile-switch"` → `switchProfile()` springt zum nächsten Eintrag in
+  `S.profiles` (aktuell genau zwei, siehe Abschnitt 9 — praktisch ein Umschalter), setzt
+  `S.day`/`S.histPlan` auf den ersten Plan des neuen Profils zurück und zeigt kurz einen
+  Toast mit dem Profilnamen. `#profBadge` (blau, `--acc2`) zeigt die ersten zwei
+  Buchstaben des aktiven Profils, wird in `render()` aktualisiert (liegt außerhalb von
+  `#app`, deshalb keine Neuerzeugung bei jedem Rendern nötig). Button selbst versteckt
+  sich, falls `S.profiles.length < 2`.
+- **Tagesumschalter** (`.daybar`) darunter: ein Button pro Plan **des aktuell gewählten
+  Profils** (`plansOfProfile(S.profile)`, nicht mehr `S.plans` direkt — das ist jetzt die
+  flache Liste über alle Profile hinweg). `S.day` hält die aktuell gewählte `planId`.
 - **Datums-/Kontextzeile** (`.daymeta`) direkt darunter, seit der vierten Runde mit
   zwei Eingabeelementen (`.daymeta-row`): einem editierbaren `<input type="date"
   data-in="cur-date">` (Default heute, `max` = heute — keine Einträge für die Zukunft)
@@ -119,7 +141,12 @@ letztere beide nur über das Zahnrad-Menü erreichbar. Kein Tabbar.
   bzw. „neue Einheit, noch nicht gespeichert", plus ein `heute`-Link (`data-action="today"`)
   zum Zurückspringen. `curDateFor(planId)` kapselt „`S.dates[planId]` oder heute" und wird
   überall verwendet, wo früher hart `todayISO()` stand (`ensureDraft`, `planRow` fürs
-  ↑-Badge, `saveWorkout`).
+  ↑-Badge, `saveWorkout`). Seit dem direkten Live-Test-Feedback (Teil 2) springt das
+  Datum außerdem automatisch auf heute zurück, sobald die Hauptseite von einer anderen
+  Ansicht aus **erneut betreten** wird (`nav()`: `S.dates = {}`, wenn `view === 'main'`
+  und vorher eine andere View aktiv war) — rückwirkendes Bearbeiten ist als kurzer
+  Ausflug gedacht, kein Modus, der über Navigation hinweg hängen bleibt. Reines
+  Neu-Rendern innerhalb der Hauptseite (Tippen, Speichern) löst das nicht aus.
 - **Plan-/Gewichtsübersicht — eine Karte pro Block, ein einziges CSS-Grid** (`.blk-card`,
   finale Optik vom 22.09.): `viewMain()` fasst aufeinanderfolgende Plan-Positionen mit
   demselben Blockbuchstaben (`grpKey()`/`grpLabel()`) zu einer Karte zusammen; die
@@ -135,12 +162,18 @@ letztere beide nur über das Zahnrad-Menü erreichbar. Kein Tabbar.
   Pro Übung: `.nm` (Name fett + Chevron `.chev-ico`, Hinweis darunter dezent) — trägt
   `data-action="toggle-hist"`, **nur** dieser Bereich ist tippbar für die Historie.
   `.bc` ist die Badge-Spalte (↑, falls letztes Mal geschafft — leer sonst, verschiebt
-  dadurch nie die Pille daneben). Bei Übungen mit Gewicht folgt `.fp` — Wiederholungen ×
-  Gewicht **und** der Haken als **ein** Bauteil: `.fp-main` zeigt Wdh. als Text + das
-  editierbare Gewichtsfeld (`data-in="weight"`, unverändert) + Einheit, `.fp-tgl` ist der
-  Haken, per senkrechtem Strich abgetrennt (nur der Pfeil, kein Text mehr — siehe
-  Abschnitt 7). Übungen ohne Gewicht (`unit:'x'`) zeigen statt `.fp` nur `.reps-plain`
-  (reiner Text, nicht fett, gleiche Größe wie die Wdh.-Angabe in der Pille). Bei
+  dadurch nie die Pille daneben; Farbe seit Teil 2 `--acc2` statt `--warn` — Gelb war der
+  einzige Nicht-Grün-Ton im Bild und passte nicht). Bei Übungen mit Gewicht folgt `.fp` —
+  Wiederholungen × Gewicht **und** der Haken als **ein** Bauteil: `.fp-main` zeigt Wdh.
+  als Text + das editierbare Gewichtsfeld (`data-in="weight"`, unverändert) + Einheit
+  (`UNITS[unit]`, seit Teil 2 für `s` (Zeit, z.B. Side Plank) ein leerer String statt
+  „Sek." — bei einer Plank-Übung ist offensichtlich, dass die Zahl Sekunden meint),
+  `.fp-tgl` ist der Haken, per senkrechtem Strich abgetrennt (nur der Pfeil, kein Text
+  mehr — siehe Abschnitt 7). Übungen ohne Gewicht (`unit:'x'`) zeigen statt `.fp` nur
+  `.reps-plain` (reiner Text, nicht fett, gleiche Größe wie die Wdh.-Angabe in der
+  Pille) — auch hier seit Teil 2 ohne unnötige Zusätze: Dead Bugs' `targetReps` in
+  `SEED_PLANS` ist jetzt `'10'` statt `'10/S.'` (bei Dead Bugs ohnehin klar, dass man
+  beide Seiten macht). Bei
   aufgeklappter Historie hängt `historyBox()` (Kurve + Tabelle, `grid-column:1/-1`) direkt
   unter der jeweiligen Übung im selben Grid — seit der vierten Runde **ohne** Marker-Punkte
   in der Kurve und **ohne** Status-Spalte in der Tabelle (siehe Abschnitt 9, Punkt A).
@@ -162,8 +195,9 @@ letztere beide nur über das Zahnrad-Menü erreichbar. Kein Tabbar.
   kein separater, prominenterer Einstiegspunkt nötig.
 - **Verlauf** (`viewHistory()`, seit der vierten Runde komplett neu — siehe Abschnitt 9,
   Punkt C): keine flache Sitzungsliste mehr. Oben derselbe Plan-Umschalter wie auf der
-  Hauptseite (`.daybar`, eigener State `S.histPlan`, nicht `S.day` — Hauptseite und
-  Verlauf-Seite können unabhängig auf verschiedenen Plänen stehen), darunter eine
+  Hauptseite (`.daybar`, ebenfalls über `plansOfProfile(S.profile)`, eigener State
+  `S.histPlan`, nicht `S.day` — Hauptseite und Verlauf-Seite können unabhängig auf
+  verschiedenen Plänen **desselben** Profils stehen), darunter eine
   horizontal scrollbare Chip-Reihe (`.filter-row`/`.fchip`, `HIST_FILTERS`) mit „Letzte
   10" / „Gesamt" / „12/6/2/1 Mon." (`S.histFilter`, `filterSeries()`). Für jede Übung
   des gewählten Plans mit Gewicht (`unit !== 'x'`) **und** vorhandenen Daten eine eigene
@@ -195,7 +229,12 @@ letztere beide nur über das Zahnrad-Menü erreichbar. Kein Tabbar.
 - `chartCard(chartPts, tablePts, unit, opts)` — Kurve + Tabelle, geteilt zwischen
   `historyBox()` (Hauptseite, Kurve unbegrenzt/Tabelle letzte 10, `opts.clickable`
   weggelassen) und `viewHistory()` (Verlauf-Seite, beide Punktreihen gleich gefiltert,
-  `opts.clickable:true` öffnet `openWorkoutDetail()` per Tabellenzeile).
+  `opts.clickable:true` öffnet `openWorkoutDetail()` per Tabellenzeile). `Chart.line()`
+  selbst (`js/chart.js`) positioniert Punkte seit Teil 2 nach **Trainingsindex**, nicht
+  nach Kalenderdatum (`X(i)` statt `X(t)`, gleichmäßiger Abstand) — direktes
+  Live-Test-Feedback: ein ausgelassenes oder zusätzlich eingeschobenes Training soll den
+  Kurvenverlauf nicht strecken/stauchen. Die Datumsbeschriftung unten (`fmtDay(t0)`/
+  `fmtDay(t1)`) bleibt kalenderecht, nur die Punktabstände dazwischen nicht mehr.
 - `filterSeries(pts, filter)` — wendet die Verlauf-Seiten-Filterauswahl auf eine
   `seriesFor()`-Reihe an (`'10'` = letzte 10 Punkte, `'all'` = alles, sonst Monate ×
   30 Tage als grobe Näherung, kein Kalendermonat).
@@ -212,23 +251,35 @@ letztere beide nur über das Zahnrad-Menü erreichbar. Kein Tabbar.
   der letzte Eintrag einen nicht passenden Blockcode hatte (genau der Fall war „Finisher"
   am Planende — mit ausgelöst durch den Nutzer-Bugreport, dass neu hinzugefügte Übungen
   „nicht im richtigen Block" landeten).
-- `ensureMigration()` (neu, 22.09.) — einmaliger Nachzieh-Schritt für Bestandsinstallationen,
-  läuft in `init()` **vor** `ensureSeed()` (wichtig, siehe unten). `ensureSeed()` legt
-  Übungen/Pläne nur an, rührt aber nie an bereits vorhandenen — das ist Absicht (sonst
-  würden eigene Planänderungen überschrieben), heißt aber auch: Namens-/Block-/Sätze-
-  Änderungen an `SEED_PLANS`/`SEED_EXERCISES` erreichen Bestandsnutzer nie von selbst.
-  `ensureMigration()` benennt bekannte alte Übungsnamen um (`renameEx`-Map, z.B.
-  „Beinpresse einbeinig (≤90°)" → „Beinpresse einbeinig"), benennt `Tag A`/`Tag B` zu
-  `Trainingseinheit 1`/`Trainingseinheit 2` um und gleicht danach pro Plan-Item
-  `block`/`targetSets`/`targetReps`/`hint` mit der passenden `SEED_PLANS`-Zeile ab
-  (**nur** wenn der Übungsname exakt matcht — eigene Ergänzungen des Nutzers, die in
-  keiner `SEED_PLANS`-Zeile vorkommen, bleiben unangetastet). Gate über `meta.migration`,
-  läuft nur einmal. **Reihenfolge ist kritisch:** liefe `ensureSeed()` zuerst, würde es
-  für jeden Bestandsnutzer mit noch „Tag A/B" benannten Plänen zusätzlich frische
+- `ensureMigration()` — einmaliger Nachzieh-Schritt für Bestandsinstallationen, läuft in
+  `init()` **vor** `ensureSeed()` (wichtig, siehe unten). `ensureSeed()` legt
+  Übungen/Profile/Pläne nur an, rührt aber nie an bereits vorhandenen — das ist Absicht
+  (sonst würden eigene Planänderungen überschrieben), heißt aber auch: Namens-/Block-/
+  Sätze-Änderungen an `SEED_PLANS`/`SEED_EXERCISES` erreichen Bestandsnutzer nie von
+  selbst. Seit Teil 2 der vierten Runde ist die Migration **versioniert** statt nur
+  einmalig (`meta.migration`, Zahl statt Bool-artigem Gate): `have < 1` → alte
+  Namens-/Block-/Sätze-Angleichung (22.09., dritte Runde: `renameEx`-Map, „Tag A/B" →
+  „Trainingseinheit 1/2", `block`/`targetSets`/`targetReps`/`hint` je Plan-Item mit der
+  passenden `SEED_PLANS`-Zeile abgleichen, **nur** wenn der Übungsname exakt matcht);
+  `have < 2` → Profile eingeführt: legt „Standard" an, falls es fehlt, und setzt
+  `profileId = Standard.id` auf jedem Plan, der noch keins hat. Danach `meta.migration =
+  2`. **Neue Migrationsschritte für spätere Runden:** einfach ein weiteres `if (have <
+  N)`-Bündel ergänzen und den finalen Wert am Ende erhöhen — alte Bündel laufen für
+  Nutzer, die schon auf dem neuesten Stand sind, nicht erneut. **Reihenfolge
+  Migration→Seed ist kritisch:** liefe `ensureSeed()` zuerst, würde es z.B. für jeden
+  Bestandsnutzer mit noch „Tag A/B" benannten Plänen zusätzlich frische
   „Trainingseinheit 1/2"-Pläne anlegen (Namen matchen ja noch nicht) — Duplikate. Beim
-  Testen dieser Migration unbedingt eine **komplett leere** IndexedDB simulieren
-  (`indexedDB.deleteDatabase('gymlog')`, promise-verpackt, siehe Abschnitt 6) und danach
-  von Hand alte Datensätze reinschreiben, sonst testet man nur den Neuinstallations-Pfad.
+  Testen einer Migration unbedingt eine **alte** IndexedDB simulieren (`indexedDB.
+  deleteDatabase('gymlog')`, promise-verpackt, siehe Abschnitt 6, danach von Hand einen
+  rohen `indexedDB.open('gymlog', <alte Version>)` mit altem Schema + Testdaten
+  reinschreiben) statt nur den Neuinstallations-Pfad zu testen.
+- `ensureSeed()` — legt seit Teil 2 zuerst Profile aus `SEED_PROFILES` an (dedupe per
+  Name wie bei Plänen/Übungen), dann Pläne aus `SEED_PLANS` (jetzt `[profileName, name,
+  rows]`, ein Eintrag mehr als vorher) mit `profileId` der passenden Profilzeile.
+- `plansOfProfile(profileId)` — `S.plans.filter(p => p.profileId === profileId)`, einzige
+  Stelle, die die flache `S.plans`-Liste nach Profil filtert; überall verwendet, wo
+  früher direkt `S.plans` für die Anzeige lief (`viewMain`, `viewHistory`, `openMenu`).
+- `switchProfile()` — Details siehe Abschnitt 3 (Profil-Icon).
 
 ---
 
@@ -297,7 +348,7 @@ ersten Öffnen sind also sowohl vorbelegte Gewichte als auch ↑-Marker sichtbar
   const rs = await navigator.serviceWorker.getRegistrations(); for (const r of rs) await r.unregister();
   const ks = await caches.keys(); for (const k of ks) await caches.delete(k); location.reload();
   ```
-  Für ausgelieferte Updates `const CACHE = 'gymlog-v9'` hochzählen (aktuell v9).
+  Für ausgelieferte Updates `const CACHE = 'gymlog-v10'` hochzählen (aktuell v10).
 - **Zielgerät Pixel 7a/8:** im Browser-Pane mit `resize_window` auf 412 × 915 testen
   (CSS-Pixel-Viewport beider Geräte in Chrome, DPR 2.625), nicht mehr 375 × 812
   (iPhone-Maß aus dem ersten Umbau). Das Layout ist fluid und braucht dafür keine
@@ -335,12 +386,33 @@ ersten Öffnen sind also sowohl vorbelegte Gewichte als auch ↑-Marker sichtbar
 - **Browser-Pane cacht Ressourcen teils hartnäckig, quer zu `cache:'no-store'`.** In
   dieser Session lieferte derselbe Server-Prozess (auch nach Neustart, auch in neuem Tab)
   für dieselbe URL mal alten, mal neuen Datei-Inhalt — sogar `fetch(url,{cache:'no-store'})`
-  bekam manchmal Alt-Content. Robuster Workaround beim Testen von Code-Änderungen:
-  **immer** einen Cache-Buster an die HTML-Dokument-URL selbst hängen, nicht nur an
-  referenzierte `<script>`/`<link>`-Pfade (`index.html?nav=<eindeutig>` reicht, Query wird
-  vom Server ignoriert, erzwingt aber eine echte Neuabfrage). Ohne das kann eine
-  „frische" Testseite trotzdem ein Alt-`index.html` mit alten Query-Strings in seinen
-  eigenen `<script src>`-Tags ausliefern.
+  bekam manchmal Alt-Content, während ein direkter `fetch()` derselben Datei im selben
+  Moment den frischen Inhalt lieferte (per Diff geprüft) — es ist also nicht die Datei
+  selbst, sondern spezifisch der `<script src>`-Ladepfad des Browsers, der stale bleibt.
+  Erster Versuch: Cache-Buster an die HTML-Dokument-URL selbst hängen (`index.html?nav=
+  <eindeutig>`, nicht nur an `<script>`/`<link>`-Pfade) — hilft oft, aber **nicht immer**:
+  in Teil 2 dieser Runde blieb ausgerechnet `js/db.js` mehrfach hintereinander stale
+  (über Server-Neustart, neuen Tab, `about:blank`-Zwischenschritt, `ctrl+shift+r` hinweg),
+  obwohl `app.js`/`chart.js` im selben Ladevorgang bereits frisch waren — die Staleness
+  ist also **pro Datei**, nicht pro Seite. Zuverlässigster Fix, wenn der Dokument-Cache-
+  Buster nicht reicht: **kurzzeitig** eine Query an das betroffene `<script src>` in
+  `index.html` selbst hängen (z.B. `js/db.js?devcachebust1`), testen, danach wieder
+  entfernen (nicht committen). Alternative ohne `index.html` anzufassen: die Datei per
+  `fetch(url + '?cb=' + Date.now(), {cache:'no-store'})` frisch laden und über
+  `new Function(text + '; return <ExportName>;')()` auswerten, dann die Eigenschaften des
+  stale globalen Objekts überschreiben (`Object.assign(DB, freshDB)` — funktioniert, weil
+  `const DB = (...)()` zwar nicht neu **zugewiesen** werden kann, seine Eigenschaften aber
+  schon; bei einer stale `function`-Deklaration auf Top-Level-Scope-Ebene geht sogar
+  direktes Neuzuweisen, z.B. `historyBox = function(...) {...}`, weil klassische
+  Top-Level-`function`-Deklarationen echte, überschreibbare `window`-Eigenschaften sind).
+  **Falle dabei:** Ein bereits fehlgeschlagener `init()`-Lauf mit stale `db.js` kann eine
+  offene IndexedDB-Verbindung auf der **alten** Schema-Version hinterlassen (nichts ruft
+  `.close()` auf, auch nicht bei einem Fehler) — ein danach erneut versuchtes `DB.open()`
+  mit **höherer** `VERSION` hängt dann lautlos im `blocked`-Zustand fest (kein `onblocked`-
+  Handler in `db.js`), `await`s laufen nie zu Ende. Einzige Auswege: den Tab **komplett
+  schließen** (setzt alle offenen Verbindungen dieser Seite zurück) oder eben der
+  Script-Tag-Cache-Buster oben, der von Anfang an verhindert, dass überhaupt ein stale
+  `DB.open()` läuft.
 - **`indexedDB.deleteDatabase()` ist kein Promise und kann lautlos blockieren.** Läuft
   noch eine offene Verbindung auf derselben Seite (z.B. weil `init()` gerade `DB.open()`
   aufgerufen hat), hängt der Request im `blocked`-Zustand, ohne Fehler zu werfen — ein
@@ -438,6 +510,8 @@ lokal im Heim-WLAN (`python -m http.server 8099`, ohne HTTPS aber ohne Installie
 
 ## 9. Vierte Runde (22.09., Abend): Verlauf/Charts, Haken-Reset, Datum, Verlauf-Seite (erledigt)
 
+### Teil 1
+
 Drei Wünsche aus der Design-Session, diesmal echte Funktionsänderungen statt Styling.
 Alle drei sind umgesetzt und im Browser-Pane (412×915) durchgespielt; Details/Codestellen
 stehen jetzt direkt in Abschnitt 3 (UI) und Abschnitt 5 (fachliche Festlegungen). Kurz
@@ -470,7 +544,49 @@ oben auf der eigenständigen Verlauf-Seite interpretiert (nicht als Verschmelzun
 der Hauptseiten-Gewichtsübersicht) — passt zur Entscheidung, die bisherige Ansicht zu
 ersetzen statt die Hauptseite zu verlängern.
 
-Keine offenen Punkte aus dieser Runde. Mögliche Folgethemen, die im Gespräch nicht
-explizit gefordert, aber durch die Umsetzung nahegelegt wurden (nicht angefangen):
-Löschen einzelner Übungen innerhalb einer Einheit (aktuell weiterhin nur ganze Einheit),
-und ob der `1-Monat`-Filter mit Kalendermonaten statt „30 Tage" rechnen soll.
+Keine offenen Punkte aus Teil 1. Mögliche Folgethemen, die im Gespräch nicht explizit
+gefordert, aber durch die Umsetzung nahegelegt wurden (nicht angefangen): Löschen
+einzelner Übungen innerhalb einer Einheit (aktuell weiterhin nur ganze Einheit), und ob
+der `1-Monat`-Filter mit Kalendermonaten statt „30 Tage" rechnen soll.
+
+### Teil 2 — direktes Live-Test-Feedback, gleicher Abend
+
+Der Nutzer hat Teil 1 im Browser-Pane getestet und direkt danach sechs weitere Punkte
+genannt. Fünf sind erledigt, einer ist **offen** (siehe unten).
+
+1. **Kurve nach Trainingsindex statt Kalenderdatum.** Begründung: ein ausgelassenes oder
+   zusätzlich eingeschobenes Training verzerrt sonst den wahrgenommenen Fortschritt (großer
+   zeitlicher Abstand ≠ großer Gewichtssprung). `js/chart.js`: `X(i)` statt `X(t)`.
+2. **Datum springt beim Verlassen der Hauptseite auf heute zurück.** War zuvor absichtlich
+   „klebrig" (Datum blieb über Navigation hinweg erhalten, siehe Abschnitt 9 Teil 1, Punkt
+   B) — nach dem Live-Test wollte der Nutzer es doch nicht als hängenbleibenden Modus,
+   sondern nur als kurzen Ausflug. `nav()` setzt `S.dates = {}` beim Wechsel **auf** `main`
+   von einer anderen View. Reines Rerendern (Tippen, Speichern, Plan-Tab wechseln)
+   innerhalb der Hauptseite löst das **nicht** aus.
+3. **Verlauf-Seiten-Reihenfolge „oben Pläne, darunter Verlauf"** — bereits genauso
+   umgesetzt (Plan-Umschalter, dann Filter-Chips, dann Chartkarten); keine Code-Änderung,
+   nur zur Sicherheit gegengeprüft (`document.getElementById('app').children`-Reihenfolge).
+4. **Side Plank ohne „Sek."-Text, Dead Bugs ohne „/S."** — `UNITS.s = ''` (statt `'Sek.'`),
+   `SEED_PLANS`-Zeile für Dead Bugs `'10/S.'` → `'10'`. Für Bestandsnutzer über
+   `ensureMigration()` Stufe 1 (Textabgleich) automatisch nachgezogen, sobald sie die
+   Übung im selben Plan haben.
+5. **↑-Badge nicht mehr gelb.** `.up-badge{color:var(--acc2)}` statt `var(--warn)` — Blau
+   ist im Rest der App bereits die etablierte Sekundärfarbe (Block-Überschriften, Chevron),
+   Gelb war die einzige fremde Farbe im Bild.
+6. **Profile — OFFENER PUNKT.** Der Nutzer will einen dritten Trainingsplan, dafür aber
+   „echte Profile mit Plan-Gruppen" (nicht nur ein dritter Tab): zwei komplett getrennte
+   Sets von Trainingsplänen, umschaltbar über ein Icon im Topbar neben Stoppuhr/Zahnrad.
+   Datenmodell + Migration + UI sind fertig (neuer `profiles`-Store, `plans.profileId`,
+   `⇄`-Icon mit Badge, `switchProfile()` zyklisch durch `S.profiles` — siehe Abschnitt 2/3),
+   **aber**: das zweite Profil heißt aktuell nur `'Neues Profil'` (Platzhalter in
+   `SEED_PROFILES`, `js/seed.js`) und hat **keine Pläne** — der Nutzer wollte die Übungen
+   des neuen Plans selbst beschreiben, das kam in dieser Runde noch nicht. **Nächster
+   Schritt:** vom Nutzer Name des zweiten Profils + Name/Blöcke/Übungen/Sätze/Wdh./Hinweise
+   des neuen Plans erfragen, dann in `SEED_PLANS` als weiteren `['<Profilname>', '<Planname>',
+   [...]]`-Eintrag eintragen (Format wie die beiden „Standard"-Pläne) und `SEED_VERSION`
+   (aktuell 4) hochzählen, plus `SEED_PROFILES`-Eintrag `'Neues Profil'` in den echten Namen
+   umbenennen (zieht über `ensureSeed()`s Namens-Dedupe **nicht** automatisch nach — dafür
+   bräuchte es entweder eine neue `ensureMigration()`-Stufe (Profil umbenennen, analog zum
+   bestehenden `renamePlan`-Muster) oder man lässt „Neues Profil" stehen und ändert nur den
+   angezeigten Namen im `profiles`-Store direkt. Einfachster Weg: `renameProfile`-Map nach
+   demselben Muster wie `renameEx`/`renamePlan` in einer neuen Migrationsstufe `have < 3`.
