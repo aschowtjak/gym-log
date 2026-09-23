@@ -38,6 +38,15 @@ const SEED_EXERCISES = [
   ['Stirndrücken', 'Arme', 'kg'],
   ['Plank', 'Rumpf', 's'], ['Crunches', 'Rumpf', 'x'],
   ['Beinheben', 'Rumpf', 'x'], ['Bauchpresse (Maschine)', 'Rumpf', 'kg'],
+
+  // --- Übungen aus Alex' Plan ("Kraft und Sehne" / "Power") ---
+  ['Bankdrücken flach', 'Brust', 'kg'], ['Big 3 im Wechsel', 'Rumpf', 's'],
+  ['Bulgarian Split Squat mit Kurzhanteln', 'Beine', 'kg'],
+  ['Latzug am Kabel', 'Rücken', 'kg'], ['Beinbeuger sitzend', 'Beine', 'kg'],
+  ['Hip Thrust', 'Beine', 'kg'], ['Einbeiniges Wadenheben', 'Beine', 'kg'],
+  ['Sprung mit Kurzhanteln oder Trap Bar', 'Beine', 'kg'],
+  ['Schrägbank 15–30°', 'Brust', 'kg'], ['Pallof Press', 'Rumpf', 'kg'],
+  ['Box Jump / Jump & Reach', 'Beine', 'x'], ['Y-Raises', 'Schultern', 'kg'],
 ];
 
 /* Profile gruppieren Trainingspläne (z.B. verschiedene Personen). Der Nutzer wechselt
@@ -72,38 +81,29 @@ const SEED_PLANS = [
     ['C2', 'Abduktoren-Maschine', '3', '15–20', ''],
     ['C3', 'Hyperextensions', '3', '10–12', 'gluteusbetont'],
   ]],
+  ['Alex', 'Kraft und Sehne', [
+    ['A1', 'Beinpresse', '3', '15', '3 s runter, 3 s hoch; Becken darf sich nicht einrollen'],
+    ['A2', 'Bankdrücken flach', '3', '6–8', '2 Wdh. vor dem Versagen aufhören, Griff etwas enger'],
+    ['A3', 'Big 3 im Wechsel', '3', '10 s', 'Wechsel aus drei Übungen, 1 Übung pro Satz'],
+    ['B1', 'Bulgarian Split Squat mit Kurzhanteln', '3', '15', '3 s runter, 3 s hoch'],
+    ['B2', 'Latzug am Kabel', '3', '8–10', ''],
+    ['B3', 'Beinbeuger sitzend', '3', '10–12', ''],
+    ['C1', 'Hip Thrust', '3', '8–10', 'Langhantel oder Maschine'],
+    ['C2', 'Kabel-Außenrotation', '3', '12–15', 'Oberarm am Körper, Handtuch unter dem Ellbogen'],
+    ['C3', 'Einbeiniges Wadenheben', '3', '10–15', 'abwechselnd mit gestrecktem und gebeugtem Knie'],
+  ]],
+  ['Alex', 'Power', [
+    ['A1', 'Beinpresse', '3', '6–8', 'Kontrastpaar mit Box Jump (danach 60–90 s Pause)'],
+    ['A2', 'Box Jump / Jump & Reach', '3', '3', 'Kontrastpaar nach Beinpresse; Sprung maximal hoch'],
+    ['A3', 'Kabelrudern', '3', '8–10', 'neu in Block 1'],
+    ['B1', 'Sprung mit Kurzhanteln oder Trap Bar', '3', '3', 'leichtes Gewicht, maximale Höhe, vor jeder Wdh. neu ansetzen'],
+    ['B2', 'Schrägbank 15–30°', '3', '8–10', 'beim ersten Mal auf Schulterschmerz testen'],
+    ['B3', 'Pallof Press', '3', '10', 'neu in Block 2'],
+    ['C1', 'Hyperextensions', '3', '10–12', 'Rücken neutral, Bewegung nur aus der Hüfte'],
+    ['C2', 'Bizepscurls (KH)', '3', '10–12', ''],
+    ['C3', 'Y-Raises', '3', '12', '1–3 kg, mit der Brust auf der Schrägbank'],
+  ]],
 ];
 
 /* Wird hochgezählt, wenn neue Startdaten nachgeliefert werden sollen. */
-const SEED_VERSION = 4;
-
-/* ---------------- Demodaten ----------------
-   Fiktive Trainingshistorie, damit sich die App beim ersten Öffnen wie an einem
-   normalen Trainingstag anschauen lässt. Pro Übung: Startgewicht, Schrittweite und
-   ob die jeweilige Einheit als "alles geschafft" gilt (steuert die Progression:
-   nur nach einer geschafften Einheit steigt das Gewicht beim nächsten Mal).
-   Wird einmalig erzeugt (siehe ensureDemo in app.js) und ist über einen Knopf im
-   Menü rückstandsfrei löschbar (Feld `demo: true` an den Workouts). */
-const DEMO_PROGRESSIONS = {
-  'Trainingseinheit 1': {
-    'Beinpresse einbeinig': { start: 50, inc: 2.5, done: [true, true, true, true] },
-    'Brustpresse': { start: 40, inc: 2.5, done: [true, true, true, true] },
-    'Hip Thrust Maschine': { start: 70, inc: 5, done: [true, true, true, true] },
-    'Latzug': { start: 45, inc: 2.5, done: [true, false, true, true] },
-    'Seated Leg Curl': { start: 28, inc: 2, done: [true, true, false, true] },
-    'Wadenheben (Maschine)': { start: 60, inc: 5, done: [true, true, true, true] },
-    'Woodchopper': { start: 20, inc: 2.5, done: [true, true, true, true] },
-  },
-  'Trainingseinheit 2': {
-    'Hip Thrust Maschine': { start: 55, inc: 2.5, done: [true, true, true, true] },
-    'Schulterpresse': { start: 25, inc: 2.5, done: [true, true, true, true] },
-    'Kabel-Außenrotation': { start: 8, inc: 1, done: [true, true, true, true] },
-    'Seated Leg Curl': { start: 24, inc: 2, done: [true, true, true, true] },
-    'Ruderzug': { start: 40, inc: 2.5, done: [true, false, true, true] },
-    'Beinpresse einbeinig': { start: 45, inc: 2.5, done: [true, true, true, true] },
-    'Abduktoren-Maschine': { start: 35, inc: 2.5, done: [true, true, true, true] },
-  },
-};
-
-/* Trainingseinheit 1/2 im Wechsel, insgesamt 8 Einheiten über die letzten ~6 Wochen. */
-const DEMO_DAYS_AGO = { 'Trainingseinheit 1': [42, 31, 20, 9], 'Trainingseinheit 2': [37, 26, 15, 3] };
+const SEED_VERSION = 5;

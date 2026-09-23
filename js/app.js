@@ -207,55 +207,10 @@ async function ensureMigration() {
   await DB.put('meta', { key: 'migration', value: 3 });
 }
 
-/* Fiktive Trainingshistorie anlegen - nur beim allerersten Start, nie erneut
-   (auch nicht nach dem Löschen über das Menü). */
-async function ensureDemo() {
-  const rec = await DB.get('meta', 'demoSeeded');
-  if (rec && rec.value) return;
-  if (!S.workouts.length) {
-    for (const w of buildDemoWorkouts()) {
-      await DB.put('workouts', w);
-      S.workouts.push(w);
-    }
-    S.workouts.sort(byDateDesc);
-  }
-  await DB.put('meta', { key: 'demoSeeded', value: true });
-}
-
-function buildDemoWorkouts() {
-  const out = [];
-  for (const planName of Object.keys(DEMO_PROGRESSIONS)) {
-    const plan = S.plans.find((p) => p.name === planName);
-    if (!plan) continue;
-    const prog = DEMO_PROGRESSIONS[planName];
-    const daysAgo = DEMO_DAYS_AGO[planName];
-
-    const seqs = {};
-    for (const [exN, cfg] of Object.entries(prog)) {
-      const w = [cfg.start];
-      for (let i = 1; i < 4; i++) w.push(w[i - 1] + (cfg.done[i - 1] ? cfg.inc : 0));
-      seqs[exN] = w;
-    }
-
-    for (let i = 0; i < 4; i++) {
-      const d = new Date(); d.setDate(d.getDate() - daysAgo[i]);
-      const date = todayFromDate(d);
-      const entries = [];
-      plan.items.forEach((it) => {
-        const exN = exName(it.exerciseId);
-        const cfg = prog[exN];
-        if (!cfg) return;
-        entries.push({ exerciseId: it.exerciseId, block: it.block || '', weight: seqs[exN][i], done: cfg.done[i] });
-      });
-      out.push({
-        id: uid(), date, startedAt: tsOf(date), finishedAt: tsOf(date) + 40 * 60000,
-        planId: plan.id, planName: plan.name, entries, demo: true,
-      });
-    }
-  }
-  return out;
-}
-const todayFromDate = (d) => { const c = new Date(d); c.setMinutes(c.getMinutes() - c.getTimezoneOffset()); return c.toISOString().slice(0, 10); };
+/* Demodaten sind seit dem produktiven Einsatz abgeschaltet (Nutzerwunsch 23.09.) -
+   erzeugt keine fiktive Trainingshistorie mehr. Bestehende Demo-Einheiten aus älteren
+   Installationen bleiben über "Demodaten löschen" im Menü weiterhin entfernbar. */
+async function ensureDemo() {}
 
 let _draftT;
 function saveDraft() {

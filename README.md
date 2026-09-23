@@ -19,8 +19,9 @@ Schrittweite vor.
 - Im Topbar ein Icon **Profil wechseln** (⇄, neben Stoppuhr und Menü) — Profile
   (**Sarah** / **Alex**) gruppieren komplett eigene Sätze von Trainingsplänen, jedes
   Profil hat seinen eigenen Tagesumschalter darunter. Merkt sich das zuletzt gewählte
-  Profil über Neustarts hinweg.
-- Darunter ein Umschalter **Trainingseinheit 1 / 2** (Pläne des aktuellen Profils).
+  Profil über Neustarts hinweg. Sarah trainiert „Trainingseinheit 1/2", Alex
+  „Kraft und Sehne" / „Power".
+- Darunter ein Umschalter zwischen den Plänen des aktuellen Profils.
   Direkt darunter ein **editierbares Datum** (heute vorausgewählt, springt beim
   Verlassen der Hauptseite wieder auf heute) plus ein Dropdown mit vergangenen
   Einheiten dieses Plans — beides setzt dasselbe Datum. Ist ein anderes Datum als heute
@@ -57,13 +58,6 @@ eingetragen.
 Maschine) hat in beiden Einheiten ein eigenes Arbeitsgewicht und eine eigene Historie.
 Nur Übungen ganz ohne Gewicht (keine Historie, nichts eingetragen) und ohne Haken
 werden nicht gespeichert.
-
-## Demodaten
-
-Die App startet mit acht fiktiven Einheiten der letzten sechs Wochen, damit sich
-sofort etwas zum Anschauen ergibt (Gewichte, Verlauf, ↑-Marker). Über
-Menü → „Demodaten löschen" verschwinden sie rückstandsfrei, ohne deine eigenen
-Einheiten anzutasten.
 
 ## Schnell ausprobieren (PC)
 
@@ -116,7 +110,7 @@ Löschen der Browserdaten bzw. Deinstallieren der App löscht auch die Trainings
 index.html               App-Shell (Topbar, Container, Speichern-Leiste, Modal)
 css/style.css             komplettes Design, Dark Theme
 js/db.js                  IndexedDB-Wrapper (exercises, profiles, plans, workouts, meta)
-js/seed.js                Übungskatalog, Profile + Pläne, Demodaten-Rezept
+js/seed.js                Übungskatalog, Profile + Pläne
 js/chart.js                abhängigkeitsfreies SVG-Liniendiagramm
 js/app.js                  State, Views, Speicherlogik
 manifest.webmanifest      PWA-Manifest (Name, Icons, Standalone-Modus)
@@ -131,4 +125,4 @@ Keine Build-Schritte, keine Abhängigkeiten — Dateien ändern, neu laden, fert
 Der Service Worker liefert die gecachte Version sofort aus und lädt die neue im
 Hintergrund (stale-while-revalidate): Nach einem Deploy ist die Änderung beim
 übernächsten Start aktiv. Soll sie sofort greifen, in `sw.js` die Zeile
-`const CACHE = 'gymlog-v10'` (aktueller Stand) hochzählen.
+`const CACHE = 'gymlog-v11'` (aktueller Stand) hochzählen.

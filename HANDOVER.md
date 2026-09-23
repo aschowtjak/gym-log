@@ -2,8 +2,9 @@
 
 Stand: 23.09.2026, nach dem Rückbau auf eine Seite, einer Feedback-Runde aus dem echten
 Betrieb (Deployment, Nutzung am Handy), einer zweiten Runde mit Layout-Umbau + neuen
-Features, einer dritten Runde mit der finalen Optik der Block-Karten und einer vierten
-Runde mit echten Funktionsänderungen in drei Teilen:
+Features, einer dritten Runde mit der finalen Optik der Block-Karten, einer vierten
+Runde mit echten Funktionsänderungen in drei Teilen und einer fünften Runde, die Alex'
+Trainingsplan eingetragen und die Demodaten abgeschaltet hat (siehe Abschnitt 9, Teil 5):
 
 - **Teil 1:** Verlaufs-Chart entschlackt (keine Marker mehr, keine Status-Spalte), Haken
   bleiben nach dem Speichern erhalten, Datum ist editierbar inkl. rückwirkendem
@@ -21,19 +22,18 @@ Runde mit echten Funktionsänderungen in drei Teilen:
   über Neustarts hinweg gemerkt (`meta.profile`), statt bei jedem Laden auf das erste
   Profil zurückzuspringen.
 
-Siehe Abschnitt 9 für Details und Code-Stellen zu allen drei Teilen.
+Siehe Abschnitt 9 für Details und Code-Stellen zu allen Teilen.
 
-**`PROMPT.md` enthält jetzt den Auftrag für die nächste Session:** Alex hat inzwischen
-seinen Trainingsplan geschickt (zwei Tage, „Kraft und Sehne" / „Power") — der komplette
-Rohinhalt steht wörtlich in `PROMPT.md`, noch **nicht** in `SEED_PLANS` integriert. Beim
-Übertragen gibt es ein paar Stellen, die nicht 1:1 ins bestehende Datenmodell passen
-(Block-Codes `1/2/3` statt `A1/A2/…`, ein Kontrastpaar-Eintrag, „Big 3 im Wechsel" als
-Sammelposten) — `PROMPT.md` listet die genauen Rückfragen. Zusätzlich möchte der Nutzer
-jetzt wirklich **ohne Demodaten** trainieren/testen (bisher seedet `ensureDemo()`
-automatisch bei jeder Neuinstallation, siehe Abschnitt 4) — ob das nur für diesen Test
-einmalig gelöscht oder grundsätzlich abgeschaltet werden soll, ist ebenfalls offen (siehe
-`PROMPT.md`). Reihenfolge laut Nutzer: erst am PC im Browser-Pane zeigen, erst nach seiner
-Bestätigung Deployment/Test **am Handy** angehen.
+**Alex' Trainingsplan ist eingetragen** (`SEED_PLANS` in `js/seed.js`, Pläne „Kraft und
+Sehne" / „Power", `SEED_VERSION` 4→5, siehe Abschnitt 9 Teil 5 für alle Klärungen mit
+dem Nutzer) und **Demodaten sind grundsätzlich abgeschaltet** (`ensureDemo()` in
+`js/app.js` ist jetzt ein No-op, `DEMO_PROGRESSIONS`/`DEMO_DAYS_AGO`/
+`buildDemoWorkouts()` entfernt — Nutzerwunsch, da jetzt produktiv trainiert wird). Beide
+Punkte waren die letzten offenen Punkte aus der vierten Runde und sind erledigt. Im
+Browser-Pane (412×915) durchgespielt: beide Profile, alle vier Pläne, Block-Gruppierung
+A/B/C, Speichern, Verlauf-Seite. Ablauf laut Nutzer: **zuerst** am PC zeigen (erledigt),
+**erst nach Bestätigung** Deployment/Test **am Handy** angehen — das ist der nächste
+Schritt.
 
 **⚠️ Offener Pull Request, noch nicht gemerged:**
 [github.com/aschowtjak/gym-log/pull/1](https://github.com/aschowtjak/gym-log/pull/1)
@@ -304,26 +304,15 @@ letztere beide nur über das Zahnrad-Menü erreichbar. Kein Tabbar.
 
 ---
 
-## 4. Demodaten
+## 4. Demodaten (abgeschaltet seit 23.09., Teil 5)
 
-`js/seed.js` enthält `DEMO_PROGRESSIONS` (Startgewicht, Schrittweite, `done`-Verlauf pro
-Übung und Trainingseinheit) und `DEMO_DAYS_AGO` (Zeitpunkte der acht Einheiten,
-alternierend Einheit 1/2, über die letzten 42 Tage). `buildDemoWorkouts()` in
-`js/app.js` rechnet daraus konkrete Workouts: das Gewicht einer Einheit ist immer „vorheriges Gewicht + Schrittweite, falls
-die vorherige Einheit `done: true` war, sonst unverändert" — dieselbe Logik, die auch
-die App selbst für den ↑-Marker verwendet, nur einmalig vorgerechnet.
-
-`ensureDemo()` erzeugt diese Workouts **nur beim allerersten Start** (kein `workouts`
-in der DB) und setzt danach `meta.demoSeeded = true`, egal ob erzeugt wurde oder nicht.
-Dadurch kommen gelöschte Demodaten nie von selbst zurück. Ein vollständiges „Alle Daten
-löschen" leert auch diesen Meta-Key mit, die App startet beim nächsten Laden also wieder
-im ursprünglichen Vorführzustand.
-
-Getestet: alle acht Demo-Einheiten zeigen plausible, steigende Gewichte, drei Einträge
-sind bewusst `done: false` (Latzug/Seated Leg Curl in Einheit 1, Ruderzug in Einheit 2),
-die jeweils letzte Einheit pro Trainingstag ist überall `done: true` — direkt nach dem
-ersten Öffnen sind also sowohl vorbelegte Gewichte als auch ↑-Marker sichtbar, und jede
-Übung hat eine Kurve mit vier Punkten.
+`ensureDemo()` in `js/app.js` ist seit Teil 5 der fünften Runde ein reines No-op — die
+App erzeugt keine fiktive Trainingshistorie mehr, da sie jetzt produktiv genutzt wird.
+`DEMO_PROGRESSIONS`, `DEMO_DAYS_AGO` (waren in `js/seed.js`) und `buildDemoWorkouts()`
+(war in `js/app.js`) wurden komplett entfernt, da unbenutzt. Alte Installationen, die
+noch Workouts mit `demo: true` aus der Zeit vor der Abschaltung haben, können diese
+weiterhin über Menü → „Demodaten löschen" rückstandsfrei entfernen (`demoDel()`,
+unverändert) — nur die automatische Neuerzeugung ist weg.
 
 ---
 
@@ -627,20 +616,84 @@ Direktes Folge-Feedback zu Teil 2, Punkt 6:
 
 Kein neuer offener Punkt aus Teil 3.
 
-### Teil 4 (23.09.): Alex' Trainingsplan geliefert — Integration ist der nächste Auftrag
+### Teil 4 (23.09.): Alex' Trainingsplan geliefert — Integration war der nächste Auftrag
 
 Der Nutzer hat direkt danach Alex' kompletten Trainingsplan geschickt (zwei Tage,
 „Kraft und Sehne" / „Power") und darum gebeten, für die **nächste Session** ein
-Übergabedokument + Prompt vorzubereiten, statt in dieser Session weiterzumachen. Der
-wörtliche Plan-Inhalt steht komplett in `PROMPT.md` (nicht hier dupliziert) — dort auch
-die konkreten Rückfragen, die vor dem Eintragen in `SEED_PLANS` zu klären sind
-(Block-Codes `1/2/3` müssen auf das `A1`/`B1`/`C1`-Schema gemappt werden, „Big 3 im
-Wechsel" ist keine einzelne Übung, das Kontrastpaar „Beinpresse → Box Jump" kombiniert
-zwei Übungen in einer Tabellenzeile, ein paar neue Übungen fehlen noch in
-`SEED_EXERCISES`). Zusätzlich neu: der Nutzer will jetzt **ohne Demodaten** trainieren/
-testen — ob `ensureDemo()` (Abschnitt 4) nur für diesen Test einmalig umgangen oder
-grundsätzlich abgeschaltet werden soll, ist ebenfalls in `PROMPT.md` als Klärungspunkt
-vermerkt. Ablauf laut Nutzer: **zuerst** am PC im Browser-Pane zeigen, **erst nach
-Bestätigung** Deployment/Test am Handy angehen — noch keine der beiden Integrationen
-(Alex' Plan, ohne-Demodaten-Verhalten) wurde in dieser Session umgesetzt, das ist
-vollständig Aufgabe der nächsten Session.
+Übergabedokument + Prompt vorzubereiten, statt in dieser Session weiterzumachen. Die
+Integration ist Teil 5 (unten) derselben Runde, in der nächsten Session.
+
+### Teil 5 (23.09., zweite Session): Alex' Plan eingetragen, Demodaten abgeschaltet
+
+Vor dem Eintragen mit dem Nutzer geklärt (`AskUserQuestion`, da echter Trainingsplan-
+Inhalt):
+
+1. **Block-Codes** `1/2/3` → `A`/`B`/`C` (also `A1–A3`/`B1–B3`/`C1–C3`), analog zu
+   Sarahs Schema.
+2. **„Big 3 im Wechsel"** (Tag A, Block 1): als **eine Sammel-Zeile** eingetragen
+   (`targetReps: '10 s'`, Hinweis „Wechsel aus drei Übungen, 1 Übung pro Satz"), keine
+   drei Einzelübungen — der Nutzer hat sich explizit dagegen entschieden, die drei
+   Einzelübungen zu benennen.
+3. **Kontrastpaar „Beinpresse → Box Jump/Jump & Reach"** (Tag B, Block 1): als **zwei
+   eigene Plan-Zeilen** eingetragen (Beinpresse 3×6–8, „Box Jump / Jump & Reach" 3×3),
+   der Kontrastpaar-Bezug steht nur im Hinweistext beider Zeilen.
+4. **Bulgarian Split Squat:** „16" war ein Tippfehler in der Rohtabelle, korrekt ist
+   **3 × 15**. Der Nutzer hat außerdem klargestellt: **„pro Seite"/„beidseitig" wird bei
+   keiner Übung im Hinweistext extra vermerkt** — das ist bei allen Übungen selbstver-
+   ständlich (gilt also auch für Pallof Press: `targetReps: '10'`, kein „/S."-Zusatz,
+   analog zur Dead-Bugs-Vereinfachung aus Runde 4 Teil 2).
+5. **Plannamen:** „Kraft und Sehne" / „Power", ohne Wochentag-Bezug (Nutzer: „das
+   übernehme ich selbst").
+6. **Sätze-Konflikt Tag A, Block 1:** Rohtabelle hatte dort uneinheitliche Sätze
+   (Beinpresse 4, Bankdrücken flach 3, Big 3 6) — bricht die Block-Header-Konvention
+   (**ein** Sätze-Wert pro Block, siehe Abschnitt 3/7). Nutzer-Entscheidung: **alles auf
+   3 Sätze vereinheitlicht** (wie schon bei Sarahs Ausreißern in Runde 3), Beinpresse
+   also 3×15 statt 4×15, Big 3 mit `targetSets: '3'` statt der ursprünglichen 6.
+7. **Demodaten grundsätzlich abgeschaltet** (nicht nur einmalig gelöscht) — der Nutzer
+   trainiert jetzt produktiv, `ensureDemo()` soll nie wieder welche erzeugen. Siehe
+   Abschnitt 4.
+
+**Neue Übungen in `SEED_EXERCISES`** (unit nach Kontext: `kg` wo Gewicht gehalten/
+gestemmt wird, `x` wo rein Körpergewicht/Sprunghöhe zählt, `s` bei „Big 3" als
+zeitbasierte Sammelübung): `Bankdrücken flach`, `Big 3 im Wechsel` (s), `Bulgarian
+Split Squat mit Kurzhanteln`, `Latzug am Kabel`, `Beinbeuger sitzend`, `Hip Thrust`
+(ohne „Maschine" — Hinweis „Langhantel oder Maschine", bewusst getrennt von Sarahs
+`Hip Thrust Maschine`), `Einbeiniges Wadenheben`, `Sprung mit Kurzhanteln oder Trap
+Bar`, `Schrägbank 15–30°`, `Pallof Press`, `Box Jump / Jump & Reach` (x, ein
+gemeinsamer Eintrag für die im Plan genannte Alternative), `Y-Raises`. Für Übungen,
+die inhaltlich zu bestehenden Katalogeinträgen passen, wurden **keine** neuen Zeilen
+angelegt, sondern der vorhandene Eintrag wiederverwendet: `Beinpresse` (generisch,
+schon im Katalog), `Kabel-Außenrotation`, `Kabelrudern` (für „Rudern am Kabel"),
+`Hyperextensions`, `Bizepscurls (KH)` (für „Bizeps-Curls mit Kurzhanteln`) — Sätze-/
+Wiederholungs-/Hinweis-Angaben unterscheiden sich weiterhin pro Plan-Zeile, nur die
+Katalog-Übung (Name/Einheit) ist geteilt.
+
+**Wichtig — `unit: 's'` hat ein editierbares Feld, keinen reinen Text.** Beim Umsetzen
+kurz missverstanden: Abschnitt 5 Punkt 2 (alte Fassung) las sich, als hätte `unit: 's'`
+(wie Side Plank) kein Eingabefeld — tatsächlich ist im Code (`planRow()` in `js/app.js`)
+`tracked = unit !== 'x'`, also **nur** `unit: 'x'` ist reiner Text ohne Feld; `'s'`
+bekommt wie `'kg'` ein editierbares Feld samt Haken, nur der Einheitentext daneben ist
+leer (`UNITS.s = ''`). „Big 3 im Wechsel" hat entsprechend ein Eingabefeld (der Nutzer
+trägt dort z. B. per Stoppuhr gestoppte Sekunden ein, wie bei Side Plank), `targetReps`
+wird für `s`/`x`-Übungen ohnehin nicht angezeigt (nur `kg` bekommt das „Reps ×"-Präfix
+vor dem Feld, siehe `planRow()`).
+
+**Kein neuer Migrationsschritt nötig:** Alex' Profil existierte schon
+(`ensureMigration()` hat es in einer früheren Runde angelegt), `ensureSeed()` legt
+fehlende Pläne für ein bestehendes Profil normal nach, ohne dass `meta.migration`
+erhöht werden muss. `SEED_VERSION` trotzdem 4→5 erhöht (Konvention: hochzählen, wenn
+neue Startdaten nachgeliefert werden).
+
+**Getestet** (Browser-Pane, 412×915, alte IndexedDB vorher per
+`indexedDB.deleteDatabase('gymlog')` gelöscht, SW-Cache geleert, siehe Abschnitt 6):
+Profil-Umschalter beide Richtungen, beide Alex-Pläne zeigen korrekt gruppierte Block-
+Karten (A/B/C, je „· 3 Sätze"), „Big 3 im Wechsel" zeigt ein Eingabefeld ohne
+Einheitentext, „Box Jump / Jump & Reach" und „Hyperextensions" zeigen korrekt nur
+Text ohne Eingabefeld (unit `x`), Speichern + Verlauf-Seite funktionieren für Alex'
+Pläne, Sarahs Pläne/Daten sind unverändert. Test-Workout danach wieder gelöscht
+(`DB.clear('workouts')`), damit keine Fake-Trainingsdaten liegen bleiben. `sw.js`-
+`CACHE` auf `gymlog-v11` hochgezählt.
+
+Kein offener Punkt aus Teil 5. Nächster Schritt laut Nutzer: Deployment/Test **am
+Handy** (Abschnitt 8), aber erst nach seiner ausdrücklichen Bestätigung — noch nicht
+angefragt in dieser Session.
