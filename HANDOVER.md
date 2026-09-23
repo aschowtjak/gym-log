@@ -1,9 +1,9 @@
 # Übergabe: Gym Log
 
-Stand: 22.09.2026 (später Abend), nach dem Rückbau auf eine Seite, einer Feedback-Runde
-aus dem echten Betrieb (Deployment, Nutzung am Handy), einer zweiten Runde mit
-Layout-Umbau + neuen Features, einer dritten Runde mit der finalen Optik der
-Block-Karten und einer vierten Runde mit echten Funktionsänderungen in drei Teilen:
+Stand: 23.09.2026, nach dem Rückbau auf eine Seite, einer Feedback-Runde aus dem echten
+Betrieb (Deployment, Nutzung am Handy), einer zweiten Runde mit Layout-Umbau + neuen
+Features, einer dritten Runde mit der finalen Optik der Block-Karten und einer vierten
+Runde mit echten Funktionsänderungen in drei Teilen:
 
 - **Teil 1:** Verlaufs-Chart entschlackt (keine Marker mehr, keine Status-Spalte), Haken
   bleiben nach dem Speichern erhalten, Datum ist editierbar inkl. rückwirkendem
@@ -21,10 +21,19 @@ Block-Karten und einer vierten Runde mit echten Funktionsänderungen in drei Tei
   über Neustarts hinweg gemerkt (`meta.profile`), statt bei jedem Laden auf das erste
   Profil zurückzuspringen.
 
-Siehe Abschnitt 9 für Details und Code-Stellen. Keine offenen Aufgaben aus `PROMPT.md`
-mehr, aber **ein offener Punkt**: Alex' Trainingsplan fehlt noch (Inhalt sollte laut
-Nutzer „analog zum anderen TP" sein, kam bis zu dieser Übergabe aber noch nicht — siehe
-Abschnitt 9, Teil 2/Punkt 6 und Teil 3, Ende).
+Siehe Abschnitt 9 für Details und Code-Stellen zu allen drei Teilen.
+
+**`PROMPT.md` enthält jetzt den Auftrag für die nächste Session:** Alex hat inzwischen
+seinen Trainingsplan geschickt (zwei Tage, „Kraft und Sehne" / „Power") — der komplette
+Rohinhalt steht wörtlich in `PROMPT.md`, noch **nicht** in `SEED_PLANS` integriert. Beim
+Übertragen gibt es ein paar Stellen, die nicht 1:1 ins bestehende Datenmodell passen
+(Block-Codes `1/2/3` statt `A1/A2/…`, ein Kontrastpaar-Eintrag, „Big 3 im Wechsel" als
+Sammelposten) — `PROMPT.md` listet die genauen Rückfragen. Zusätzlich möchte der Nutzer
+jetzt wirklich **ohne Demodaten** trainieren/testen (bisher seedet `ensureDemo()`
+automatisch bei jeder Neuinstallation, siehe Abschnitt 4) — ob das nur für diesen Test
+einmalig gelöscht oder grundsätzlich abgeschaltet werden soll, ist ebenfalls offen (siehe
+`PROMPT.md`). Reihenfolge laut Nutzer: erst am PC im Browser-Pane zeigen, erst nach seiner
+Bestätigung Deployment/Test **am Handy** angehen.
 
 **⚠️ Offener Pull Request, noch nicht gemerged:**
 [github.com/aschowtjak/gym-log/pull/1](https://github.com/aschowtjak/gym-log/pull/1)
@@ -616,10 +625,22 @@ Direktes Folge-Feedback zu Teil 2, Punkt 6:
    Fallback aufs erste Profil — schützt z.B. gegen ein durch Backup-Import verändertes
    Profil-Set).
 
-Kein neuer offener Punkt aus Teil 3. **Weiterhin offen aus Teil 2, Punkt 6:** Alex' Plan
-fehlt noch — der Nutzer beschreibt ihn „analog zum anderen TP" (Trainingsplan), war zum
-Zeitpunkt dieser Übergabe aber noch nicht da. Sobald er kommt: als weiteren
-`['Alex', '<Planname>', [...]]`-Eintrag in `SEED_PLANS` eintragen (gleiches Format wie
-Sarahs zwei Pläne) und `SEED_VERSION` (aktuell 4) hochzählen, keine weitere
-Migrationsstufe nötig (Alex' Profil existiert schon, `ensureSeed()` legt fehlende Pläne
-für ein bestehendes Profil ganz normal an).
+Kein neuer offener Punkt aus Teil 3.
+
+### Teil 4 (23.09.): Alex' Trainingsplan geliefert — Integration ist der nächste Auftrag
+
+Der Nutzer hat direkt danach Alex' kompletten Trainingsplan geschickt (zwei Tage,
+„Kraft und Sehne" / „Power") und darum gebeten, für die **nächste Session** ein
+Übergabedokument + Prompt vorzubereiten, statt in dieser Session weiterzumachen. Der
+wörtliche Plan-Inhalt steht komplett in `PROMPT.md` (nicht hier dupliziert) — dort auch
+die konkreten Rückfragen, die vor dem Eintragen in `SEED_PLANS` zu klären sind
+(Block-Codes `1/2/3` müssen auf das `A1`/`B1`/`C1`-Schema gemappt werden, „Big 3 im
+Wechsel" ist keine einzelne Übung, das Kontrastpaar „Beinpresse → Box Jump" kombiniert
+zwei Übungen in einer Tabellenzeile, ein paar neue Übungen fehlen noch in
+`SEED_EXERCISES`). Zusätzlich neu: der Nutzer will jetzt **ohne Demodaten** trainieren/
+testen — ob `ensureDemo()` (Abschnitt 4) nur für diesen Test einmalig umgangen oder
+grundsätzlich abgeschaltet werden soll, ist ebenfalls in `PROMPT.md` als Klärungspunkt
+vermerkt. Ablauf laut Nutzer: **zuerst** am PC im Browser-Pane zeigen, **erst nach
+Bestätigung** Deployment/Test am Handy angehen — noch keine der beiden Integrationen
+(Alex' Plan, ohne-Demodaten-Verhalten) wurde in dieser Session umgesetzt, das ist
+vollständig Aufgabe der nächsten Session.
