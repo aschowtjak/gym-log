@@ -18,7 +18,11 @@
 <header id="topbar">
   <div class="tb-left"><button class="icon-btn hidden" id="backBtn" data-action="back" aria-label="Zurück">‹</button></div>
   <h1 id="title">Training</h1>
-  <div class="tb-right"><button class="icon-btn" data-action="menu" aria-label="Menü">⚙</button></div>
+  <div class="tb-right">
+    <button class="icon-btn prof-btn" data-action="profile-switch" aria-label="Profil wechseln">⇄<span id="profBadge" class="prof-badge hidden"></span></button>
+    <button class="icon-btn sw-btn" data-action="stopwatch" aria-label="Stoppuhr">⏱<span id="swBadge" class="sw-badge hidden"></span></button>
+    <button class="icon-btn" data-action="menu" aria-label="Menü">⚙</button>
+  </div>
 </header>
 
 <main id="app"></main>
@@ -30,9 +34,9 @@
 <div id="modal" class="hidden"><div id="modalBox"></div></div>
 <div id="toast" class="hidden"></div>
 
-<script src="js/db.js"></script>
-<script src="js/seed.js"></script>
-<script src="js/chart.js"></script>
-<script src="js/app.js"></script>
+<script src="js/db.js" charset="utf-8"></script>
+<script src="js/seed.js" charset="utf-8"></script>
+<script src="js/chart.js" charset="utf-8"></script>
+<script src="js/app.js" charset="utf-8"></script>
 </body>
 </html>

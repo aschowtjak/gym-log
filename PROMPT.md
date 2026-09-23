@@ -1,89 +1,161 @@
-# Prompt für die nächste Session
+# Prompt für die nächste Session (Alex' Trainingsplan integrieren)
 
 Alles zwischen den Linien in einen neuen Chat kopieren. Arbeitsverzeichnis vorher auf
 `D:\Claude Code\Fitness App` setzen.
 
 ---
 
-Im Verzeichnis `D:\Claude Code\Fitness App` liegt „Gym Log", eine fertige, lauffähige
-Trainings-PWA (Plain HTML/CSS/JS, IndexedDB, Service Worker, kein Build, keine
-Abhängigkeiten, deutschsprachig, Dark Theme, Mobile-First). **Lies zuerst `HANDOVER.md`** —
-dort stehen Aufbau, Datenmodell, fachliche Festlegungen und Stolperfallen.
+Im Verzeichnis `D:\Claude Code\Fitness App` liegt „Gym Log", eine lauffähige Trainings-PWA
+(Plain HTML/CSS/JS, IndexedDB, Service Worker, kein Build, keine Abhängigkeiten,
+deutschsprachig, Dark Theme, Mobile-First, Zielgerät Android/Pixel 7a/8). **Lies zuerst
+`HANDOVER.md`** — dort stehen Aufbau, Datenmodell, fachliche Festlegungen und
+Stolperfallen, insbesondere **Abschnitt 9** (vierte Runde: Verlauf/Charts, Haken-Reset,
+Datum, Verlauf-Seite, Profile) für den technischen Hintergrund von Profilen/Plänen.
 
-Die App ist zu umfangreich geraten. Bau sie auf das Wesentliche zurück. Die bestehende
-Technik (PWA, IndexedDB, `js/db.js`, `js/chart.js`, Backup-Export/-Import, Plan-Editor)
-bleibt, `js/app.js` und die Oberfläche werden neu aufgebaut.
+**Wichtig:** Es gibt bereits einen offenen Pull Request —
+[github.com/aschowtjak/gym-log/pull/1](https://github.com/aschowtjak/gym-log/pull/1),
+Branch `block-cards-and-stopwatch` → `master`, noch nicht gemerged. Als Erstes auf diesen
+Branch wechseln (`git checkout block-cards-and-stopwatch`, ggf. vorher `git fetch`). Die
+live auf GitHub Pages laufende Version baut aus `master` und zeigt deshalb noch nicht
+diesen Stand. Änderungen als weitere Commits auf **demselben Branch** pushen, damit sie in
+PR #1 erscheinen — keinen neuen Branch/PR aufmachen, nicht auf `master` committen. Der PR
+bleibt offen, bis der Nutzer freigibt.
 
-**Zweck der App in einem Satz:** Beim Training am Handy sofort sehen, mit welchem Gewicht
-jede Übung heute dran ist — abgeleitet aus der letzten Einheit.
+## Ausgangslage
 
-## Das Prinzip
+Es gibt zwei Profile: **Sarah** (fertig, zwei Pläne „Trainingseinheit 1/2") und **Alex**
+(bisher ein leeres Platzhalter-Profil ohne Plan, siehe `SEED_PROFILES`/`SEED_PLANS` in
+`js/seed.js`). Der Nutzer hat jetzt Alex' Trainingsplan geliefert (unten, wörtlich
+übernommen) — die Aufgabe dieser Session ist, ihn als Seed-Daten einzutragen.
 
-Das Arbeitsgewicht der nächsten Einheit ergibt sich vollständig aus der letzten:
-Gewicht plus die Information, ob **alle Sätze mit allen Wiederholungen** geschafft wurden.
-War alles geschafft, wird beim nächsten Mal erhöht. **Um wie viel, entscheidet der Nutzer
-selbst und tippt es manuell ein** — die App rechnet nichts hoch und schlägt keine
-Schrittweite vor. Pro Übung also: ein Textfeld fürs Gewicht und ein Haken
-„alles geschafft?". Mehr nicht, insbesondere keine Einzelsätze.
+## Aufgabe
 
-## Alles auf einer Seite
+### 1. Alex' Plan in `SEED_PLANS` eintragen
 
-Es gibt genau eine Seite, keine Reiter-Navigation:
+Der Nutzer hat zwei Trainingstage genannt (analog zu Sarahs „Trainingseinheit 1/2" —
+vermutlich zwei eigene Pläne unter dem Profil `'Alex'`, working-Namen unten aus den
+Tag-Überschriften abgeleitet, mit dem Nutzer kurz bestätigen). Rohdaten, so wie geliefert:
 
-1. Oben ein Umschalter **[Tag A] [Tag B]** (mehr Pläne gibt es nicht, kein freies Training).
-2. Darunter die Plan-Übersicht in der bestehenden, bewährten Tabellenform, ergänzt um eine
-   **Spalte Gewicht**:
+**Tag A – Montag (Kraft und Sehne)**
 
-   | Block | Übung | Sätze × Wdh. | Gewicht |
-   |---|---|---|---|
-   | A1 | Beinpresse einbeinig (≤90°)<br><sub>explosiv hoch, RIR 2–3</sub> | 4 × 5–8 | `40` ↑ |
+| Block | Übung | Sätze × Wdh. | Hinweis |
+|---|---|---|---|
+| 1 | Beinpresse | 4 × 15 | 3 s runter, 3 s hoch; Becken darf sich nicht einrollen |
+| 1 | Bankdrücken flach | 3 × 6–8 | 2 Wdh. vor dem Versagen aufhören, Griff etwas enger |
+| 1 | Big 3 im Wechsel | 1 Übung pro Satz | 6 × 10 s |
+| 2 | Bulgarian Split Squat mit Kurzhanteln | 3 × 16 | 3 s runter, 3 s hoch |
+| 2 | Latzug am Kabel | 3 × 8–10 | – |
+| 2 | Beinbeuger sitzend | 3 × 10–12 | – |
+| 3 | Hip Thrust | 3 × 8–10 | Langhantel oder Maschine |
+| 3 | Außenrotation am Kabel | 3 × 12–15 | Oberarm am Körper, Handtuch unter dem Ellbogen |
+| 3 | Einbeiniges Wadenheben | 3 × 10–15 | abwechselnd mit gestrecktem und gebeugtem Knie |
 
-   - Die Vorgabe aus der letzten Einheit steht als Wert **vorbelegt im Eingabefeld**, damit
-     man sie nur überschreiben muss.
-   - Soll laut letzter Einheit erhöht werden, wird das deutlich markiert — altes Gewicht mit
-     einem Pfeil nach oben bzw. einem Plus dahinter (z.B. „40 kg ↑"). Die Markierung ist der
-     Hinweis, jetzt manuell zu erhöhen.
-   - War die letzte Einheit nicht vollständig geschafft, keine Markierung: Gewicht halten.
-   - Ohne Historie bleibt das Feld leer.
-   - Daneben der Haken **„alles geschafft"** für die heutige Einheit.
-   - Der Hinweis aus dem Plan (z.B. „3 s exzentrisch") bleibt sichtbar, aber dezent.
-3. Unten ein Knopf zum Speichern der Einheit.
-4. Tippen auf eine Übungszeile klappt deren Historie auf: die letzten Einheiten als Liste
-   (Datum, Gewicht, geschafft ja/nein) und die vorhandene Kurve aus `js/chart.js`.
-   Kein separater Fortschritts-Reiter.
-5. Plan bearbeiten, Backup und Demodaten löschen gehören in ein unaufdringliches Menü
-   (Zahnrad in der Kopfzeile).
+**Tag B – Mittwoch (Power)**
 
-Die Seite soll ruhig wirken: wenig Farbe, klare Zeilen, große Tippflächen fürs Studio.
+| Block | Übung | Sätze × Wdh. | Hinweis |
+|---|---|---|---|
+| 1 | Beinpresse → Box Jump bzw. Jump & Reach | 3 × 6–8 → 60–90 s Pause → 3 × 3 | Kontrastpaar; Sprung maximal hoch |
+| 1 | Rudern am Kabel | 3 × 8–10 | neu in Block 1 |
+| 2 | Sprung mit Kurzhanteln oder Trap Bar | 3 × 3 | leichtes Gewicht, maximale Höhe, vor jeder Wdh. neu ansetzen |
+| 2 | Schrägbank 15–30° | 3 × 8–10 | beim ersten Mal auf Schulterschmerz testen |
+| 2 | Pallof Press | 3 × 10 pro Seite | neu in Block 2 |
+| 3 | Hyperextension | 3 × 10–12 | Rücken neutral, Bewegung nur aus der Hüfte |
+| 3 | Bizeps-Curls mit Kurzhanteln | 3 × 10–12 | – |
+| 3 | Y-Raises | 3 × 12 | 1–3 kg, mit der Brust auf der Schrägbank |
 
-## Tracking-Regeln
+**Vor dem Eintragen klären (`AskUserQuestion`, nicht raten — das ist echter
+Trainingsplan-Inhalt, ein Fehler hier ist beim nächsten Training spürbar, nicht nur
+kosmetisch):**
 
-- **Nur Übungen mit Zusatzgewicht werden protokolliert.** Ohne Eingabefeld und ohne Haken
-  bleiben: Band Pull-Aparts und Dead Bugs (Tag A), Side Plank und Hyperextensions (Tag B).
-  Sie stehen weiterhin in der Übersicht, damit der Plan vollständig ist.
-- **Tag A und Tag B sind strikt getrennt.** Dieselbe Übung hat an beiden Tagen einen anderen
-  Fokus (Schnellkraft vs. Hypertrophie) und ein anderes Arbeitsgewicht. Historie und
-  Vorbelegung immer über `planId + exerciseId` schlüsseln, nie nur über die Übung.
-  Betrifft Hip Thrust Maschine, Seated Leg Curl und Beinpresse einbeinig.
-- Übungen ohne Bewertung dürfen **nicht** gespeichert werden, sonst landen vorbelegte
-  Gewichte übersprungener Übungen als trainiert im Verlauf (siehe `touched()` im Altcode).
+- **Block-Codes:** Das Datenmodell gruppiert Übungen über `grpKey()` in `js/app.js`
+  (Regex `/^[A-Za-z]\d+$/`) zu „Block A/B/C" — ein reiner `1`/`2`/`3`-Code wie in der
+  Rohtabelle matcht diese Regex **nicht** und würde als eigener, falsch benannter
+  Block landen. Vermutlich `1`→`A1`/`A2`/`A3`, `2`→`B1`/`B2`/`B3`, `3`→`C1`/`C2`/`C3`
+  (analog zu Sarahs Plänen) — mit dem Nutzer bestätigen, bevor `SEED_PLANS` geschrieben
+  wird.
+- **„Big 3 im Wechsel"** (Tag A, Block 1): passt nicht ins Schema „eine Übung = eine
+  Zeile mit Sätze×Wdh." — „1 Übung pro Satz" + „6 × 10 s" klingt nach einem Zirkel aus
+  mehreren Übungen im Wechsel. Nachfragen, was „Big 3" konkret enthält (die drei
+  Einzelübungen? McGill Big 3 — Curl-up, Side Plank, Bird Dog?) und ob das als **drei**
+  eigene Plan-Zeilen (mit `unit:'s'` wie Side Plank bei Sarah) oder als **eine**
+  Sammel-Zeile mit Hinweistext eingetragen werden soll.
+- **Kontrastpaar „Beinpresse → Box Jump bzw. Jump & Reach"** (Tag B, Block 1): kombiniert
+  zwei Übungen mit unterschiedlichem Sätze×Wdh.-Schema (3×6–8 Beinpresse, dann Pause,
+  dann 3×3 Sprung) in einer Tabellenzeile. Das Datenmodell kennt nur eine
+  Sätze/Wdh.-Angabe pro `exerciseId` — vermutlich als **zwei** Plan-Zeilen eintragen
+  (Beinpresse 3×6–8, Box Jump/Jump & Reach 3×3), mit dem Kontrastpaar-Zusammenhang nur
+  im Hinweistext der zweiten Zeile vermerkt. Mit dem Nutzer bestätigen.
+- **„3 × 16" bei Bulgarian Split Squat** (Tag A, Block 2): in der Rohtabelle stand hier
+  ein Gedankenstrich vor dem Hinweistext („3 × 16 - 3 s runter, 3 s hoch"), oben schon
+  als Sätze×Wdh. `3 × 16` und Hinweis `3 s runter, 3 s hoch` interpretiert (passt zum
+  Beinpresse-Eintrag direkt darüber) — beim Nutzer gegenprüfen, dass das stimmt und
+  nicht z.B. `3 × 16` pro Seite gemeint war.
+- **„3 × 10 pro Seite" bei Pallof Press:** nach der Rückmeldung aus Teil 2/3 dieser Runde
+  (Dead Bugs' „/S." wurde entfernt, weil „selbstverständlich") vermutlich auch hier
+  `targetReps: '10'` ohne „pro Seite"-Zusatz — aber das ist Interpretation, nicht vom
+  Nutzer explizit gesagt für diesen neuen Plan. Kurz gegenprüfen statt automatisch
+  gleich zu behandeln.
+- **Plan-/Tagesnamen:** Reicht „Kraft und Sehne" / „Power" (aus den Tag-Überschriften),
+  oder soll der Wochentag mit rein (wie bislang nirgends im Datenmodell vorkommt — Sarahs
+  Pläne haben keinen Wochentag-Bezug)?
+- **Neue Übungen im Katalog:** Einige Übungsnamen kommen in `SEED_EXERCISES` noch nicht
+  vor (z.B. „Beinpresse" ohne Zusatz — zu unterscheiden von Sarahs „Beinpresse
+  einbeinig", „Bulgarian Split Squat mit Kurzhanteln", „Box Jump", „Jump & Reach",
+  „Sprung mit Kurzhanteln oder Trap Bar", „Schrägbank 15–30°", „Pallof Press",
+  „Y-Raises" …) — als neue Zeilen in `SEED_EXERCISES` ergänzen, `unit` passend wählen
+  (`kg` für Gewichtsübungen, `s` nur falls zeitbasiert wie bei „Big 3", `x` falls ohne
+  Gewicht/nur Körperspannung, z.B. Pallof Press könnte auch Kabelzug-Gewicht haben —
+  klären statt raten).
 
-## Demodaten
+Nach Klärung: neuen Eintrag `['Alex', '<Planname Tag A>', [...]]` und `['Alex',
+'<Planname Tag B>', [...]]` in `SEED_PLANS` (`js/seed.js`) ergänzen (gleiches
+`[Block, Übung, Sätze, Wiederholungen, Hinweis]`-Zeilenformat wie bei Sarah), fehlende
+Übungen in `SEED_EXERCISES` ergänzen, `SEED_VERSION` (aktuell 4) hochzählen. Keine neue
+Migrationsstufe nötig — Alex' Profil existiert schon, `ensureSeed()` legt fehlende Pläne
+für ein bestehendes Profil normal an (siehe `ensureSeed()` in `js/app.js`).
 
-Lege **fiktive Trainingsdaten** an, damit sich die App direkt wie an einem normalen
-Trainingstag anschauen lässt: rund acht Einheiten über die letzten sechs Wochen, abwechselnd
-Tag A und Tag B, plausible Gewichte mit erkennbarer Steigerung, dabei zwei oder drei Übungen
-„nicht geschafft". Die jüngste Einheit soll bei mehreren Übungen den Steigerungs-Marker
-hinterlassen, damit beim Öffnen sowohl vorbelegte Gewichte als auch Pfeile zu sehen sind und
-die Historie je Übung eine Kurve zeigt. Die Daten müssen als Demodaten erkennbar und mit
-einem Knopf im Menü rückstandsfrei löschbar sein.
+### 2. Ohne Demo-Daten testen — mit dem Nutzer klären
+
+Der Nutzer will die App jetzt **wirklich** zum Trainieren benutzen und dabei ohne
+Demodaten testen. Aktuell erzeugt `ensureDemo()` (`js/app.js`) bei jeder komplett neuen
+Installation automatisch acht fiktive Einheiten (siehe Abschnitt 4 in `HANDOVER.md`) —
+das war zum Vorführen/Entwickeln gedacht, ist aber jetzt möglicherweise nicht mehr
+gewünscht, wo echte Trainingsdaten entstehen. **Vorher klären, nicht annehmen:**
+- Reicht es, für den PC-/Handy-Test die Demodaten einmalig zu löschen (Menü → „Demodaten
+  löschen", bereits vorhanden), oder soll `ensureDemo()` grundsätzlich abgeschaltet /
+  entfernt werden, weil die App jetzt produktiv genutzt wird?
+- Falls nur für den Test: reicht `indexedDB.deleteDatabase('gymlog')` + Neuladen vor dem
+  PC-Test (siehe HANDOVER Abschnitt 6), damit unmittelbar mit Sarahs und Alex' echten,
+  leeren Plänen gestartet wird?
+
+### 3. Ablauf laut Nutzer
+
+1. Integration am PC im Browser-Pane zeigen und durchspielen (beide Profile, alle
+   Pläne, Datum/rückwirkendes Bearbeiten, Verlauf-Seite — siehe Testschritte unten).
+2. Erst wenn der Nutzer das am PC bestätigt: Deployment/Test **am Handy** unterstützen
+   (Netlify Drop oder PR-Merge nach `master` für GitHub Pages, je nachdem was der Nutzer
+   zu diesem Zeitpunkt will — vorher fragen, nicht selbst entscheiden, siehe
+   `HANDOVER.md` Abschnitt 8 für die Optionen).
+3. Der Nutzer will danach direkt damit trainieren — also wirklich fehlerfrei und mit
+   den *richtigen* Zahlen aus der Tabelle oben, keine Platzhalter.
 
 ## Rahmen
 
 - Keine neuen Abhängigkeiten, kein Build-Schritt, weiterhin offlinefähig und installierbar.
-- Oberfläche auf Deutsch, Zielgerät ist ein Android-Handy.
-- Vor Abschluss im Browser bei 375 × 812 px durchspielen: Tag A öffnen, Gewichte eintragen,
-  Haken setzen, speichern, Tag B prüfen, erneut Tag A öffnen und kontrollieren, dass Vorgabe
-  und Marker stimmen. Beachte den Service-Worker-Hinweis in `HANDOVER.md`, sonst testest du
-  die alte Version.
-- `README.md` und `HANDOVER.md` am Ende an den neuen Stand anpassen.
+- Vor Abschluss im Browser-Pane bei **412 × 915** (nicht 375 × 812, siehe HANDOVER
+  Abschnitt 6) durchspielen: Profil-Umschalter (beide Profile), alle vier Pläne (Sarah ×2,
+  Alex ×2), Block-Gruppierung korrekt (Block A/B/C, nicht „Block 1/2/3" oder
+  ungruppiert), Historie/Chart je Übung, Speichern, Verlauf-Seite mit Filtern für Alex'
+  Pläne. Service-Worker-Cache vorher löschen (Code in HANDOVER Abschnitt 6), sonst
+  testest du die alte Version. `sw.js`-`CACHE`-Version bei jeder Auslieferung hochzählen.
+- **Browser-Pane-Cache ist in dieser App-Historie wiederholt hartnäckig gewesen** — lies
+  HANDOVER Abschnitt 6 zu den dort dokumentierten Workarounds (Cache-Buster auf die
+  HTML-Dokument-URL, im Zweifel zusätzlich kurzzeitig einen Query-String an die
+  `<script src>`-Tags in `index.html` hängen und danach wieder entfernen; Vorsicht bei
+  `indexedDB.deleteDatabase()` — promise-wrappen und vorher auf eine Seite ohne offene
+  DB-Verbindung navigieren, sonst blockiert eine hängengebliebene alte Verbindung jeden
+  weiteren Versuch, die DB neu zu öffnen).
+- `README.md` und `HANDOVER.md` am Ende an den neuen Stand anpassen (Alex' Plan ist dann
+  kein offener Punkt mehr).
+- Commits gehen auf den Branch `block-cards-and-stopwatch` (PR #1), nicht auf `master`.
+  Den PR nicht selbst mergen, außer der Nutzer bittet ausdrücklich darum.

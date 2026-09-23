@@ -16,32 +16,48 @@ Schrittweite vor.
 
 ## Eine Seite
 
-- Oben ein Umschalter **Tag A / Tag B** — mehr Pläne gibt es nicht. Darunter das
-  heutige Datum plus ein kurzer Hinweis, ob dieser Tag heute schon gespeichert wurde.
-- Darunter die Plan-Tabelle Block | Übung | Sätze × Wdh., ergänzt um ein Gewichtsfeld:
-  vorbelegt mit dem Gewicht der letzten Einheit, mit **↑** markiert, wenn letztes Mal
-  alles geschafft wurde. Daneben der Haken „alles geschafft" für heute.
+- Im Topbar ein Icon **Profil wechseln** (⇄, neben Stoppuhr und Menü) — Profile
+  (**Sarah** / **Alex**) gruppieren komplett eigene Sätze von Trainingsplänen, jedes
+  Profil hat seinen eigenen Tagesumschalter darunter. Merkt sich das zuletzt gewählte
+  Profil über Neustarts hinweg. Sarah trainiert „Trainingseinheit 1/2", Alex
+  „Kraft und Sehne" / „Power".
+- Darunter ein Umschalter zwischen den Plänen des aktuellen Profils.
+  Direkt darunter ein **editierbares Datum** (heute vorausgewählt, springt beim
+  Verlassen der Hauptseite wieder auf heute) plus ein Dropdown mit vergangenen
+  Einheiten dieses Plans — beides setzt dasselbe Datum. Ist ein anderes Datum als heute
+  gewählt, zeigt die Seite genau diese Einheit zum **rückwirkenden Bearbeiten**: Felder
+  füllen sich mit den damals gespeicherten Werten, „Einheit speichern" überschreibt sie.
+  Ein „heute"-Link führt zurück.
+- Darunter je Block (A/B/C) eine eigene Karte mit ihren Übungen, Sätze stehen einmal
+  in der Block-Überschrift („Block A · 3 Sätze"). Pro Übung: Name (+ Hinweistext),
+  daneben eine Pille mit Wiederholungen × Gewicht (nur die Zahl ist editierbar) und
+  ein Pfeil-Haken direkt in der Pille — antippen markiert „nächstes Mal steigern",
+  füllt sich grün. Der zweite, gedämpfte Pfeil links davon (falls vorhanden) zeigt,
+  dass letztes Mal schon alles geschafft war.
 - Tippen auf eine Übungszeile (erkennbar am **›**) klappt ihre Historie auf: letzte
-  Einheiten als Liste plus Fortschrittskurve.
-- Unten ein Knopf **„Einheit speichern"** — übernimmt alle angezeigten Gewichte als
-  heutige Einheit, auch unveränderte. Ein zweites Speichern am selben Tag überschreibt
-  den heutigen Eintrag, statt einen zweiten anzulegen.
-- Menü oben rechts: **Verlauf** (alle gespeicherten Einheiten mit Datum, tippen zeigt
-  Details inkl. Löschen), Plan bearbeiten, Backup und Demodaten löschen.
+  Einheiten als scrollbare Tabelle plus Fortschrittskurve (reine Linie, ohne Punkte).
+  Die Kurve ist nach **Trainingsindex** gezeichnet, nicht nach Kalenderdatum — ein
+  ausgelassenes oder zusätzliches Training verzerrt den Verlauf dadurch nicht.
+- Unten ein Knopf **„Einheit speichern"** — übernimmt alle angezeigten Gewichte für das
+  gewählte Datum, auch unveränderte. Ein zweites Speichern desselben Datums überschreibt
+  den vorhandenen Eintrag, statt einen zweiten anzulegen; die Haken bleiben dabei
+  angehakt (kein Reset). Zurückgesetzt wird ein Haken erst, wenn ein anderes, noch nicht
+  gespeichertes Datum gewählt wird.
+- Menü oben rechts: **Fortschritt & Verlauf** (Pläne oben, darunter je Übung eine
+  Chartkarte mit Kurve + Tabelle, filterbar nach „Letzte 10" oder Zeitraum — Tippen auf
+  einen Tabelleneintrag öffnet die ganze Einheit dieses Tages inkl. Löschen), Plan
+  bearbeiten, Backup und Demodaten löschen.
 
-**Nur Übungen mit Zusatzgewicht werden protokolliert.** Band Pull-Aparts, Dead Bugs,
-Side Plank und Hyperextensions stehen im Plan, haben aber kein Eingabefeld.
-**Tag A und Tag B sind strikt getrennt** — dieselbe Übung (z.B. Hip Thrust Maschine)
-hat an beiden Tagen ein eigenes Arbeitsgewicht und eine eigene Historie.
+**Nur Übungen mit Zusatzgewicht (oder Zeit) werden protokolliert.** Band Pull-Aparts,
+Dead Bugs und Hyperextensions haben kein Eingabefeld — nur die Wiederholungszahl als
+Text, gleiche Stelle wie die Pille bei den anderen Übungen. Side Plank hat dagegen ein
+Eingabefeld wie eine Gewichtsübung, nur ohne Einheitentext daneben (Sekunden statt kg
+versteht sich von selbst) — die Zeit wird mit der Stoppuhr gestoppt und von Hand
+eingetragen.
+**Trainingseinheit 1 und 2 sind strikt getrennt** — dieselbe Übung (z.B. Hip Thrust
+Maschine) hat in beiden Einheiten ein eigenes Arbeitsgewicht und eine eigene Historie.
 Nur Übungen ganz ohne Gewicht (keine Historie, nichts eingetragen) und ohne Haken
 werden nicht gespeichert.
-
-## Demodaten
-
-Die App startet mit acht fiktiven Einheiten der letzten sechs Wochen, damit sich
-sofort etwas zum Anschauen ergibt (Gewichte, Verlauf, ↑-Marker). Über
-Menü → „Demodaten löschen" verschwinden sie rückstandsfrei, ohne deine eigenen
-Einheiten anzutasten.
 
 ## Schnell ausprobieren (PC)
 
@@ -93,8 +109,8 @@ Löschen der Browserdaten bzw. Deinstallieren der App löscht auch die Trainings
 ```
 index.html               App-Shell (Topbar, Container, Speichern-Leiste, Modal)
 css/style.css             komplettes Design, Dark Theme
-js/db.js                  IndexedDB-Wrapper (exercises, plans, workouts, meta)
-js/seed.js                Übungskatalog, Pläne Tag A / Tag B, Demodaten-Rezept
+js/db.js                  IndexedDB-Wrapper (exercises, profiles, plans, workouts, meta)
+js/seed.js                Übungskatalog, Profile + Pläne
 js/chart.js                abhängigkeitsfreies SVG-Liniendiagramm
 js/app.js                  State, Views, Speicherlogik
 manifest.webmanifest      PWA-Manifest (Name, Icons, Standalone-Modus)
@@ -109,4 +125,4 @@ Keine Build-Schritte, keine Abhängigkeiten — Dateien ändern, neu laden, fert
 Der Service Worker liefert die gecachte Version sofort aus und lädt die neue im
 Hintergrund (stale-while-revalidate): Nach einem Deploy ist die Änderung beim
 übernächsten Start aktiv. Soll sie sofort greifen, in `sw.js` die Zeile
-`const CACHE = 'gymlog-v4'` hochzählen.
+`const CACHE = 'gymlog-v11'` (aktueller Stand) hochzählen.
