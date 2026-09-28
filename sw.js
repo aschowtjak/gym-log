@@ -1,5 +1,5 @@
 /* Service Worker: App-Shell cachen, damit die App im Studio auch ohne Netz läuft. */
-const CACHE = 'gymlog-v11';
+const CACHE = 'gymlog-v12';
 const ASSETS = [
   './',
   './index.html',
