@@ -132,25 +132,18 @@ td.no{color:var(--bad);font-weight:700}
 .blk-h .n{font-size:11px;color:var(--mut);font-weight:700}
 .ex-div{grid-column:1/-1;border-top:1px solid var(--line)}
 
-.nm{grid-column:1;padding:17px 2px;min-width:0}
+/* Einheitliche Zeilenhöhe: jede Übung hat Platz für Name + eine Hinweiszeile, auch ohne
+   Hinweis -- die Liste wirkt ruhiger. Nur ein umbrechender Name macht eine Zeile höher. */
+.nm{grid-column:1;padding:12px 2px;min-width:0;min-height:64px;
+  display:flex;flex-direction:column;justify-content:center}
 .nm[data-action]{cursor:pointer}
 .nm[data-action]:active{opacity:.65}
-/* Name, Chevron und Info-Knopf laufen als Text: bei langen Namen bricht die Zeile wie ein Satz um */
+/* Name und Chevron laufen als Text: bei langen Namen bricht die Zeile wie ein Satz um */
 .nm b{display:block;font-size:14.5px;font-weight:600;line-height:1.3;opacity:.92}
 .nm .nw{white-space:nowrap}
 .chev-ico{display:inline-block;margin-left:6px;color:var(--mut);font-size:17px;line-height:1;opacity:.7;transition:transform .15s ease}
 .chev-ico.on{color:var(--acc2);transform:rotate(90deg)}
 .nm>span{display:block;color:var(--mut);font-size:12px;margin-top:3px;opacity:.7}
-/* Info-Knopf: Ausführungs-Tipps; eigenes Tap-Ziel (größer als sichtbar), öffnet ein Blatt */
-.info-btn{position:relative;width:21px;height:21px;margin-left:8px;vertical-align:-4px;padding:0;border:0;border-radius:50%;
-  background:rgba(56,189,248,.14);display:inline-flex;align-items:center;justify-content:center;cursor:pointer}
-.info-btn::after{content:"";position:absolute;inset:-10px}
-.info-btn svg{width:15px;height:15px;display:block}
-.info-btn circle{fill:var(--acc2)}
-.info-btn path{stroke:var(--acc2);stroke-width:2.5;stroke-linecap:round;fill:none}
-.info-btn:active{background:var(--acc2)}
-.info-btn:active circle{fill:#04212e}
-.info-btn:active path{stroke:#04212e}
 
 /* ↑-Badge: eigene feste Spalte -- da/leer verschiebt nie die Pille daneben */
 .bc{width:100%;text-align:center;min-width:14px}
@@ -162,17 +155,17 @@ td.no{color:var(--bad);font-weight:700}
 /* Wdh. × Gewicht als Pille, Haken per senkrechtem Strich integriert (ein Bauteil) */
 .fp{justify-self:stretch;display:flex;align-items:stretch;border:1px solid var(--line);
   border-radius:12px;overflow:hidden;background:var(--bg3)}
-.fp-main{flex:1;display:flex;align-items:baseline;justify-content:space-between;gap:6px;
-  padding:6px 4px 6px 11px;min-width:0}
+.fp-main{flex:1;display:flex;align-items:baseline;justify-content:space-between;gap:4px;
+  padding:6px 3px 6px 9px;min-width:0}
 .fp-main .x{color:var(--mut);opacity:.75;font-size:12.5px;white-space:nowrap}
 .fp-valwrap{display:flex;align-items:baseline;gap:2px;min-width:0}
-.fp-main input{width:58px;min-width:0;background:transparent;border:0;padding:0;
+.fp-main input{width:50px;min-width:0;background:transparent;border:0;padding:0;
   font:800 18px/1.1 inherit;color:var(--fg);text-align:right}
 .fp-main input:focus{outline:0}
 .fp-main input::placeholder{color:var(--mut);font-weight:600}
 .fp-main .unit{font-size:11px;color:var(--mut);margin-left:1px;white-space:nowrap}
 
-.fp-tgl{width:38px;flex:0 0 auto;display:flex;align-items:center;justify-content:center;
+.fp-tgl{width:34px;flex:0 0 auto;display:flex;align-items:center;justify-content:center;
   border-left:1px solid var(--line);cursor:pointer;transition:background .15s ease}
 .fp-tgl svg{width:17px;height:17px;display:block}
 .fp-tgl path{stroke:var(--mut);stroke-width:2.6;fill:none;stroke-linecap:round;stroke-linejoin:round;
@@ -189,7 +182,13 @@ td.no{color:var(--bad);font-weight:700}
 
 /* Historie / Kurve je Übung (chartCard()): einmal aufklappbar unter der Planzeile (.histbox,
    grid-column: liegt im .blk-card-Grid) und einmal als eigene Karte auf der Verlauf-Seite (.hist-card) */
-.histbox{grid-column:1/-1;background:var(--bg3);border-radius:12px;padding:8px 6px 2px;margin:10px 0 0}
+.histbox{grid-column:1/-1;background:var(--bg3);border-radius:12px;padding:8px 6px 2px;margin:2px 0 12px}
+.histbox .tips{padding:6px 8px 12px}
+/* Reiter im aufgeklappten Bereich (Ausführung | Verlauf) */
+.exp-tabs{display:flex;gap:4px;background:var(--bg2);border-radius:9px;padding:3px;margin:0 2px 8px}
+.exp-tab{flex:1;background:none;border:0;border-radius:7px;padding:7px 8px;color:var(--mut);
+  font-size:13px;font-weight:700;cursor:pointer}
+.exp-tab.on{background:var(--bg3);color:var(--fg);box-shadow:0 1px 3px rgba(0,0,0,.35)}
 .chartbox{padding:4px 2px}
 svg.chart{width:100%;height:auto;display:block}
 .histtab-wrap{max-height:220px;overflow-y:auto}

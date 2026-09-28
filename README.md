@@ -42,8 +42,9 @@ Schrittweite vor.
   dass letztes Mal schon alles geschafft war.
 - Tippen auf eine Übungszeile (erkennbar am **›**) klappt ihre Historie auf: letzte
   Einheiten als scrollbare Tabelle plus Fortschrittskurve (reine Linie, ohne Punkte).
-  Der kleine **i-Knopf** hinter dem Namen (bei Sarahs Übungen) öffnet stattdessen die
-  Ausführungs-Tipps; Tipps, die nur für die andere Phase gelten, stehen blass darunter.
+  Bei Sarahs Übungen hat der aufgeklappte Bereich zwei Reiter **„Ausführung | Verlauf“**
+  (der zuletzt gewählte bleibt aktiv); Tipps, die nur für die andere Phase gelten, stehen
+  blass darunter. Übungen ohne Gewicht (z. B. Einbeinstand) zeigen nur die Tipps.
   Die Kurve ist nach **Trainingsindex** gezeichnet, nicht nach Kalenderdatum — ein
   ausgelassenes oder zusätzliches Training verzerrt den Verlauf dadurch nicht.
 - Unten ein Knopf **„Einheit speichern"** — übernimmt alle angezeigten Gewichte für das
@@ -133,4 +134,4 @@ Keine Build-Schritte, keine Abhängigkeiten — Dateien ändern, neu laden, fert
 Der Service Worker liefert die gecachte Version sofort aus und lädt die neue im
 Hintergrund (stale-while-revalidate): Nach einem Deploy ist die Änderung beim
 übernächsten Start aktiv. Soll sie sofort greifen, in `sw.js` die Zeile
-`const CACHE = 'gymlog-v12'` (aktueller Stand) hochzählen.
+`const CACHE = 'gymlog-v13'` (aktueller Stand) hochzählen.

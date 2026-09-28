@@ -733,3 +733,19 @@ Branch `sarah-phases` (von `master` nach dem Merge von PR #1). Mit dem Nutzer ge
   4 Einheiten erhalten, Gewichte laufen weiter, keine Duplikate; Neuinstallation; Phase
   wechseln/speichern; Info-Blatt; Alex unverändert; Plan-Editor speichert beide Phasen.
   `sw.js` → `gymlog-v12`, `SEED_VERSION` 6.
+
+### Teil 2 (28.09., Folge-Feedback): Info-Knopf raus, Reiter, ruhigere Zeilen
+
+Nutzer-Feedback nach dem Live-Test: Zeilen unterschiedlich hoch, Info-Knopf frisst Platz.
+Umgesetzt (beides per Rückfrage bestätigt):
+- **Info-Knopf entfernt**, Tipps stecken im aufklappbaren Bereich (`expandBox()` ersetzt
+  `historyBox()`): gibt es Tipps **und** Verlauf, zwei Reiter „Ausführung | Verlauf"
+  (`S.expTab`, persistiert in `meta.expTab`, Default „Ausführung"). Übungen ohne Gewicht,
+  aber mit Tipps (Einbeinstand, Dead Bugs, Hyperextensions bei Sarah) sind jetzt ebenfalls
+  aufklappbar und zeigen nur die Tipps; ohne Tipps (Alex) nur den Verlauf wie bisher.
+- **Einheitliche Zeilenhöhe:** `.nm{min-height:64px}` (Platz für Name + eine Hinweiszeile),
+  Innenabstand 17→12px. Nur umbrechende Namen/lange Hinweise (v. a. Alex) machen Zeilen höher.
+- **Schmalere Gewichtspille:** Eingabefeld 58→50px (reicht für „999,5"), Haken 38→34px,
+  weniger Innenabstand — Pille 179→162px, mehr Platz für Namen.
+- `sw.js` → `gymlog-v13`. Merge-Freigabe: `.claude/settings.local.json` erlaubt
+  `Bash(gh pr merge *)` (gitignored, nur lokal).

@@ -20,6 +20,7 @@ const S = {
   stopwatch: { startedAt: null, elapsed: 0, running: false },
   histPlan: null,             // gewählter Plan auf der Verlauf-Seite
   histFilter: '10',           // '10' | 'all' | '12' | '6' | '2' | '1' (Monate)
+  expTab: 'tips',             // Reiter im aufgeklappten Bereich: 'tips' | 'hist' (meta.expTab)
 };
 
 /* ---------------- Helfer ---------------- */
@@ -98,6 +99,8 @@ async function init() {
   await ensureSeed();
   await ensureDemo();
 
+  const tabRec = await DB.get('meta', 'expTab');
+  if (tabRec && tabRec.value) S.expTab = tabRec.value;
   const draftRec = await DB.get('meta', 'draft');
   if (draftRec && draftRec.value) S.draft = draftRec.value;
 
@@ -429,20 +432,20 @@ function planRow(plan, it) {
   const exId = it.exerciseId;
   const unit = unitOf(exId);
   const tracked = unit !== 'x';
-  const isOpen = tracked && S.openKey === plan.id + '|' + exId;
+  const tips = tipsFor(exId);
+  const expandable = tracked || !!tips;
+  const isOpen = expandable && S.openKey === plan.id + '|' + exId;
   const d = tracked ? S.draft[plan.id][exId] : null;
   const prev = tracked ? lastLog(exId, plan.id, curDateFor(plan.id)) : null;
   const up = tracked && prev && prev.done && prev.weight > 0;
   const spec = specOf(it);
 
-  /* Chevron + Info-Knopf hängen am letzten Wort des Namens (nowrap), damit sie bei einem
-     Zeilenumbruch nie allein in der zweiten Zeile stehen. */
+  /* Der Chevron hängt am letzten Wort des Namens (nowrap), damit er bei einem
+     Zeilenumbruch nie allein in der zweiten Zeile steht. */
   const name = exName(exId), cut = name.lastIndexOf(' ') + 1;
-  let h = '<div class="nm"' + (tracked ? ' data-action="toggle-hist" data-id="' + exId + '"' : '') + '>' +
+  let h = '<div class="nm"' + (expandable ? ' data-action="toggle-hist" data-id="' + exId + '"' : '') + '>' +
     '<b>' + esc(name.slice(0, cut)) + '<span class="nw">' + esc(name.slice(cut)) +
-    (tracked ? '<span class="chev-ico' + (isOpen ? ' on' : '') + '">›</span>' : '') +
-    (tipsFor(exId) ? '<button type="button" class="info-btn" data-action="tips" data-id="' + exId + '" aria-label="Ausführung">' +
-      '<svg viewBox="0 0 24 24"><circle cx="12" cy="7.2" r="1.7"/><path d="M12 11.2v6.3"/></svg></button>' : '') + '</span></b>' +
+    (expandable ? '<span class="chev-ico' + (isOpen ? ' on' : '') + '">›</span>' : '') + '</span></b>' +
     (spec.hint ? '<span>' + esc(spec.hint) + '</span>' : '') +
     '</div>';
 
@@ -462,13 +465,36 @@ function planRow(plan, it) {
       '</div>';
   }
 
-  if (isOpen) h += historyBox(exId, plan.id, unit);
+  if (isOpen) h += expandBox(exId, plan.id, unit, tracked, tips);
 
   return h;
 }
 
+/* Aufgeklappter Bereich unter einer Übung: Ausführungs-Tipps und/oder Verlauf. Gibt es
+   beides, schalten zwei Reiter um (zuletzt gewählter Reiter gemerkt in meta.expTab). */
+function expandBox(exId, planId, unit, tracked, tips) {
+  const tab = !tips ? 'hist' : !tracked ? 'tips' : S.expTab;
+  let h = '<div class="histbox">';
+  if (tips && tracked) {
+    h += '<div class="exp-tabs">' + [['tips', 'Ausführung'], ['hist', 'Verlauf']].map(([k, label]) =>
+      '<button type="button" class="exp-tab' + (tab === k ? ' on' : '') + '" data-action="exp-tab" data-id="' + k + '">' +
+      label + '</button>').join('') + '</div>';
+  }
+  if (tab === 'tips') h += tipsHTML(tips);
+  else { const pts = seriesFor(exId, planId); h += chartCard(pts, pts.slice(-10), UNITS[unit], {}); }
+  return h + '</div>';
+}
+
+/* Tipps der aktiven Phase normal, Tipps der anderen Phase blass mit Phasen-Marke. */
+function tipsHTML(tips) {
+  const ph = hasPhases(S.profile) ? curPhase() : 0;
+  return '<ul class="tips">' + tips.map((t) =>
+    '<li' + (t.ph && ph && t.ph !== ph ? ' class="dim"' : '') + '>' +
+    (t.ph ? '<span class="ptag">Phase ' + t.ph + '</span>' : '') + esc(t.t) + '</li>').join('') + '</ul>';
+}
+
 /* Chart + Tabelle für eine Übungsreihe – geteilt zwischen der aufklappbaren Historie
-   auf der Hauptseite (historyBox(), Chart unbegrenzt/Tabelle letzte 10) und den
+   auf der Hauptseite (expandBox(), Chart unbegrenzt/Tabelle letzte 10) und den
    Chartkarten der Verlauf-Seite (viewHistory(), beides gleich gefiltert). Mit
    opts.clickable öffnet ein Tippen auf eine Tabellenzeile die ganze Einheit dieses
    Tages (openWorkoutDetail) – einziger verbliebener Weg, eine ganze Einheit zu
@@ -487,10 +513,6 @@ function chartCard(chartPts, tablePts, unit, opts) {
   return h;
 }
 
-function historyBox(exId, planId, unit) {
-  const pts = seriesFor(exId, planId);
-  return '<div class="histbox">' + chartCard(pts, pts.slice(-10), UNITS[unit], {}) + '</div>';
-}
 
 /* ---------------- Einheit speichern ---------------- */
 /* Speichert alle Übungen mit einem Gewicht (auch unverändert übernommene) oder
@@ -580,18 +602,6 @@ async function setPhase(n) {
   await DB.put('profiles', prof);
   render();
   toast('Phase ' + n + ' aktiv', 1800);
-}
-
-function openTips(exId) {
-  const tips = tipsFor(exId);
-  if (!tips) return;
-  const ph = hasPhases(S.profile) ? curPhase() : 0;
-  openModal('<div class="modal-h"><h2>' + esc(exName(exId)) +
-    '<span class="modal-sub">Ausführung' + (ph ? ' · Phase ' + ph : '') + '</span></h2>' +
-    '<button class="icon-btn" data-action="modal-close">✕</button></div>' +
-    '<ul class="tips">' + tips.map((t) =>
-      '<li' + (t.ph && ph && t.ph !== ph ? ' class="dim"' : '') + '>' +
-      (t.ph ? '<span class="ptag">Phase ' + t.ph + '</span>' : '') + esc(t.t) + '</li>').join('') + '</ul>');
 }
 
 async function demoDel() {
@@ -933,7 +943,7 @@ function onClick(ev) {
     case 'day': S.day = id; S.openKey = null; render(); break;
     case 'phase-pick': openPhasePicker(); break;
     case 'phase-set': setPhase(+id); break;
-    case 'tips': openTips(id); break;
+    case 'exp-tab': S.expTab = id; DB.put('meta', { key: 'expTab', value: id }); render(); break;
     case 'toggle-hist': { const key = S.day + '|' + id; S.openKey = S.openKey === key ? null : key; render(); break; }
     case 'save-workout': saveWorkout(); break;
     case 'today': delete S.dates[id]; S.openKey = null; render(); break;
