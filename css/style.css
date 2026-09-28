@@ -78,16 +78,28 @@ select{appearance:none;background-image:linear-gradient(45deg,transparent 50%,va
 
 /* ---------- Tagesumschalter ---------- */
 .daybar{display:flex;gap:8px;margin-bottom:10px}
-.dayseg{flex:1;background:var(--bg2);border:1px solid var(--line);color:var(--mut);
-  border-radius:12px;padding:13px 10px;font-size:15.5px;font-weight:700;cursor:pointer}
+.dayseg{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;gap:1px;
+  background:var(--bg2);border:1px solid var(--line);color:var(--mut);
+  border-radius:12px;padding:13px 8px;font-size:15.5px;font-weight:700;cursor:pointer}
+.dayseg .d1{line-height:1.25}
+/* Untertitel (z.B. "Kraft/Power") klein unter dem Plannamen; Button wird dadurch nur minimal höher */
+.dayseg:has(.d2){padding:8px 8px 7px}
+.dayseg .d2{font-size:11.5px;font-weight:600;line-height:1.25;opacity:.75;max-width:100%;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .dayseg.on{background:var(--fg);color:var(--bg);border-color:transparent}
 
 /* ---------- Datum / Verlauf-Auswahl ---------- */
 .daymeta{margin:0 4px 16px}
 .daymeta-row{display:flex;gap:8px;margin-bottom:7px}
-.daymeta-row select,.daymeta-row input{width:auto;flex:1;padding:9px 10px;font-size:13.5px;border-radius:10px}
+.daymeta-row select,.daymeta-row input{width:auto;flex:1;min-width:0;padding:9px 10px;font-size:13.5px;border-radius:10px}
 .daymeta-row select{padding-right:30px;background-position:calc(100% - 13px) 50%,calc(100% - 8px) 50%}
 .daymeta-txt{color:var(--mut);font-size:12.5px;text-align:center}
+/* Phasen-Chip (nur bei Profilen mit Phasen): zeigt die aktive Phase, Tippen öffnet die Auswahl */
+.phase-chip{flex:0 0 auto;display:flex;align-items:center;gap:3px;background:rgba(56,189,248,.12);
+  border:1px solid rgba(56,189,248,.4);color:var(--acc2);border-radius:10px;padding:0 8px 0 11px;
+  font-size:13.5px;font-weight:800;cursor:pointer;white-space:nowrap}
+.phase-chip svg{width:15px;height:15px}
+.phase-chip path{stroke:currentColor;stroke-width:2.6;fill:none;stroke-linecap:round;stroke-linejoin:round}
 .lnk{background:none;border:0;padding:0;margin-left:4px;color:var(--acc2);font:inherit;font-size:inherit;
   text-decoration:underline;cursor:pointer}
 
@@ -123,10 +135,22 @@ td.no{color:var(--bad);font-weight:700}
 .nm{grid-column:1;padding:17px 2px;min-width:0}
 .nm[data-action]{cursor:pointer}
 .nm[data-action]:active{opacity:.65}
-.nm b{display:flex;align-items:center;gap:6px;font-size:14.5px;font-weight:600;line-height:1.3;opacity:.92}
-.chev-ico{color:var(--mut);font-size:17px;flex:0 0 auto;transition:transform .15s ease}
+/* Name, Chevron und Info-Knopf laufen als Text: bei langen Namen bricht die Zeile wie ein Satz um */
+.nm b{display:block;font-size:14.5px;font-weight:600;line-height:1.3;opacity:.92}
+.nm .nw{white-space:nowrap}
+.chev-ico{display:inline-block;margin-left:6px;color:var(--mut);font-size:17px;line-height:1;opacity:.7;transition:transform .15s ease}
 .chev-ico.on{color:var(--acc2);transform:rotate(90deg)}
-.nm span{display:block;color:var(--mut);font-size:12px;margin-top:3px;opacity:.7}
+.nm>span{display:block;color:var(--mut);font-size:12px;margin-top:3px;opacity:.7}
+/* Info-Knopf: Ausführungs-Tipps; eigenes Tap-Ziel (größer als sichtbar), öffnet ein Blatt */
+.info-btn{position:relative;width:21px;height:21px;margin-left:8px;vertical-align:-4px;padding:0;border:0;border-radius:50%;
+  background:rgba(56,189,248,.14);display:inline-flex;align-items:center;justify-content:center;cursor:pointer}
+.info-btn::after{content:"";position:absolute;inset:-10px}
+.info-btn svg{width:15px;height:15px;display:block}
+.info-btn circle{fill:var(--acc2)}
+.info-btn path{stroke:var(--acc2);stroke-width:2.5;stroke-linecap:round;fill:none}
+.info-btn:active{background:var(--acc2)}
+.info-btn:active circle{fill:#04212e}
+.info-btn:active path{stroke:#04212e}
 
 /* ↑-Badge: eigene feste Spalte -- da/leer verschiebt nie die Pille daneben */
 .bc{width:100%;text-align:center;min-width:14px}
@@ -202,6 +226,21 @@ svg.chart{width:100%;height:auto;display:block}
 @keyframes up{from{transform:translateY(24px);opacity:.4}}
 .modal-h{display:flex;align-items:center;gap:10px;margin-bottom:14px}
 .modal-h h2{flex:1;margin:0}
+.modal-sub{display:block;color:var(--mut);font-size:12.5px;font-weight:500;margin-top:2px}
+
+/* Ausführungs-Tipps (Info-Knopf) */
+.tips{list-style:none;margin:0;padding:0 2px 4px;display:flex;flex-direction:column;gap:11px}
+.tips li{position:relative;padding-left:17px;font-size:14.5px;line-height:1.5}
+.tips li::before{content:"";position:absolute;left:3px;top:.62em;width:5px;height:5px;border-radius:50%;background:var(--acc2);opacity:.8}
+.tips li.dim{opacity:.4}
+.ptag{display:inline-block;font-size:10.5px;font-weight:800;border-radius:5px;padding:1px 6px;margin-right:6px;
+  vertical-align:1px;background:rgba(56,189,248,.16);color:var(--acc2)}
+
+/* Phasenauswahl */
+.ph-opt{display:block;width:100%;text-align:left;background:var(--bg3);border:1px solid var(--line);color:var(--fg);
+  border-radius:12px;padding:12px 14px;margin-bottom:8px;cursor:pointer;font-size:15px;font-weight:700}
+.ph-opt small{display:block;color:var(--mut);font-weight:500;font-size:12.5px;margin-top:2px}
+.ph-opt.on{border-color:var(--acc2);box-shadow:inset 0 0 0 1px var(--acc2)}
 
 /* ---------- toast ---------- */
 #toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(96px + var(--safe-b));

@@ -697,3 +697,39 @@ Pläne, Sarahs Pläne/Daten sind unverändert. Test-Workout danach wieder gelös
 Kein offener Punkt aus Teil 5. Nächster Schritt laut Nutzer: Deployment/Test **am
 Handy** (Abschnitt 8), aber erst nach seiner ausdrücklichen Bestätigung — noch nicht
 angefragt in dieser Session.
+
+---
+
+## 10. Sechste Runde (28.09.): Sarahs neuer Plan mit Phase 1/2, Ausführungs-Tipps
+
+Branch `sarah-phases` (von `master` nach dem Merge von PR #1). Mit dem Nutzer geklärt
+(Entwurf: https://claude.ai/artifact/AgWuNqBRP2PvH8WTmroDRs):
+
+- **Phasen pro Profil.** Plan-Items tragen neben den Grundwerten (= Phase 1) optional
+  `p2: {targetSets, targetReps, hint}`; die aktive Phase liegt in `profile.phase`.
+  `specOf(it)` liefert die Werte der aktiven Phase und wird überall statt der direkten
+  Felder benutzt (Zeile, Block-Kopf, Plan-Editor). Profile ohne `p2`-Items (Alex) haben
+  keine Phasen und keinen Chip. Umschalten über den **Phasen-Chip** links neben dem Datum
+  (Nutzerwahl statt Sofort-Schalter, weil die Phase nur alle paar Wochen wechselt).
+  Workouts speichern `phase`; Gewicht/Verlauf bleiben phasenübergreifend **eine Kurve**.
+- **Block-Kopf zeigt die Satz-Spanne** über alle Übungen des Blocks (`setsRange()`,
+  „2 + 2–3 → 2–3 Sätze") — Nutzer: „2–3 Sätze sind überall in Ordnung".
+- **Ausführungs-Tipps** in `TIPS` (`js/seed.js`, je Profilname → Übungsname, statisch,
+  nicht in IndexedDB). `ph` markiert phasenspezifische Tipps (andere Phase blass).
+  Info-Knopf (SVG-„i" in hellblauem Kreis) hängt per `.nw`-Nowrap am letzten Wort des
+  Namens, damit Chevron + Knopf nie allein umbrechen.
+- **Plannamen** „Tag A"/„Tag B" mit neuem Feld `plan.subtitle` (zweizeiliger
+  Tagesumschalter), auch für Alex. `ensureSeed()` dedupliziert Pläne jetzt pro Profil
+  (Namen wiederholen sich). Plan-Editor hat ein Untertitel-Feld.
+- **Seated Leg Curl an Tag B** ist eine eigene Übung („Seated Leg Curl „2 hoch, 1
+  runter““), damit ihr Verlauf nicht mit dem beidbeinigen Curl vermischt wird.
+- **Migration Stufe 4:** baut Sarahs Pläne an Ort und Stelle um (gleiche `planId` →
+  Verlauf bleibt für Übungen, die im Plan bleiben), benennt alle Pläne um, benennt
+  „Face Pulls"/„Woodchopper" im Katalog um, setzt `Sarah.phase = 1`. Workouts werden nie
+  angefasst. Stufe 1 benennt nur noch Pläne **ohne** `profileId` um (sonst würde ein
+  Backup-Import, der `meta.migration` zurücksetzt, die neuen „Tag A/B" wieder umbenennen).
+  `ensureDraft()` ergänzt fehlende Übungen im Draft, statt bei gleichem Datum abzubrechen.
+- Getestet im Browser-Pane (412×915): alte Version mit echten Testeinheiten → Update →
+  4 Einheiten erhalten, Gewichte laufen weiter, keine Duplikate; Neuinstallation; Phase
+  wechseln/speichern; Info-Blatt; Alex unverändert; Plan-Editor speichert beide Phasen.
+  `sw.js` → `gymlog-v12`, `SEED_VERSION` 6.

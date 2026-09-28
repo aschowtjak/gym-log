@@ -41,6 +41,39 @@ const unitOf = (id) => { const e = S.exercises.find((x) => x.id === id); return 
 const exName = (id) => { const e = S.exercises.find((x) => x.id === id); return e ? e.name : 'Übung'; };
 const exByName = (n) => S.exercises.find((e) => e.name === n);
 const plansOfProfile = (profileId) => S.plans.filter((p) => p.profileId === profileId);
+const profileOf = (id) => S.profiles.find((p) => p.id === id);
+const planLabel = (p) => p.name + (p.subtitle ? ' · ' + p.subtitle : '');
+
+/* Phasen: Ein Plan-Item kann neben seinen Grundwerten (= Phase 1) ein `p2` mit eigenen
+   Sätzen/Wdh./Hinweis tragen. Die aktive Phase gilt pro Profil (`profile.phase`); Profile
+   ganz ohne `p2`-Items (z.B. Alex) kennen keine Phasen und sehen auch keinen Phasen-Chip.
+   Übung, Gewicht und Verlauf sind von der Phase unabhängig -- eine Kurve pro Übung. */
+const hasPhases = (profileId) => plansOfProfile(profileId).some((p) => p.items.some((it) => it.p2));
+const curPhase = () => { const p = profileOf(S.profile); return p && p.phase === 2 && hasPhases(S.profile) ? 2 : 1; };
+const specOf = (it) => (curPhase() === 2 && it.p2 ? it.p2 : it);
+/* SEED_PLANS-Zeile -> Plan-Item (Phase-2-Spalten optional). */
+const seedItem = ([block, ex, sets, reps, hint, sets2, reps2, hint2]) => {
+  const it = { exerciseId: (exByName(ex) || {}).id, block, targetSets: sets, targetReps: reps, hint };
+  if (sets2 != null) it.p2 = { targetSets: sets2, targetReps: reps2, hint: hint2 || '' };
+  return it;
+};
+const tipsFor = (exId) => { const p = profileOf(S.profile); return (p && TIPS[p.name] && TIPS[p.name][exName(exId)]) || null; };
+/* Sätze-Angabe für den Block-Kopf: Spanne über alle Übungen des Blocks ("2" + "2–3" -> "2–3"). */
+function setsRange(values) {
+  let lo = Infinity, hi = -Infinity;
+  for (const v of values) {
+    const ns = String(v || '').split(/[–-]/).map((x) => parseFloat(x));
+    if (ns.some((n) => !isFinite(n))) return values.find((x) => x) || '';
+    ns.forEach((n) => { lo = Math.min(lo, n); hi = Math.max(hi, n); });
+  }
+  return lo === Infinity ? '' : lo === hi ? String(lo) : lo + '–' + hi;
+}
+function dayBtns(plans, activeId, action) {
+  return '<div class="daybar">' + plans.map((p) =>
+    '<button class="dayseg' + (p.id === activeId ? ' on' : '') + '" data-action="' + action + '" data-id="' + p.id + '">' +
+    '<span class="d1">' + esc(p.name) + '</span>' + (p.subtitle ? '<span class="d2">' + esc(p.subtitle) + '</span>' : '') +
+    '</button>').join('') + '</div>';
+}
 /* Blockgruppierung für die Übersicht: "A1"/"A2"/"A3" -> Gruppe "A" ("Block A"),
    "Finisher" bleibt eine eigene Gruppe mit ihrem Namen als Überschrift. */
 const grpKey = (block) => (/^[A-Za-z]\d+$/.test(block || '') ? block[0].toUpperCase() : (block || '–'));
@@ -114,13 +147,7 @@ async function ensureSeed() {
   const have = rec ? rec.value : 0;
   if (have >= SEED_VERSION) return;
 
-  for (const [name, muscle, unit] of SEED_EXERCISES) {
-    if (!exByName(name)) {
-      const e = { id: uid(), name, muscle, unit };
-      S.exercises.push(e);
-      await DB.put('exercises', e);
-    }
-  }
+  for (const [name] of SEED_EXERCISES) await ensureExercise(name);
 
   for (const pname of SEED_PROFILES) {
     if (!S.profiles.some((p) => p.name === pname)) {
@@ -130,21 +157,30 @@ async function ensureSeed() {
     }
   }
 
-  for (const [profileName, name, rows] of SEED_PLANS) {
-    if (S.plans.some((p) => p.name === name)) continue;
-    const profile = S.profiles.find((p) => p.name === profileName);
+  /* Plannamen wiederholen sich profilübergreifend ("Tag A"), daher Abgleich pro Profil. */
+  for (const [profileName, name, subtitle, rows] of SEED_PLANS) {
+    const profile = S.profiles.find((p) => p.name === profileName) || {};
+    if (S.plans.some((p) => p.name === name && p.profileId === profile.id)) continue;
     const plan = {
-      id: uid(), name, profileId: (profile || {}).id,
-      order: plansOfProfile((profile || {}).id).length,
-      items: rows.map(([block, ex, sets, reps, hint]) => ({
-        exerciseId: (exByName(ex) || {}).id, block, targetSets: sets, targetReps: reps, hint,
-      })).filter((it) => it.exerciseId),
+      id: uid(), name, subtitle, profileId: profile.id,
+      order: plansOfProfile(profile.id).length,
+      items: rows.map(seedItem).filter((it) => it.exerciseId),
     };
     S.plans.push(plan);
     await DB.put('plans', plan);
   }
 
   await DB.put('meta', { key: 'seed', value: SEED_VERSION });
+}
+
+/* Legt eine Übung aus SEED_EXERCISES an, falls es sie (per Name) noch nicht gibt. */
+async function ensureExercise(name) {
+  if (exByName(name)) return;
+  const row = SEED_EXERCISES.find((r) => r[0] === name);
+  if (!row) return;
+  const e = { id: uid(), name, muscle: row[1], unit: row[2] };
+  S.exercises.push(e);
+  await DB.put('exercises', e);
 }
 
 /* Einmaliger Nachzieh-Schritt für Bestandsinstallationen: ensureSeed() legt Übungen/Pläne nur
@@ -154,7 +190,7 @@ async function ensureSeed() {
 async function ensureMigration() {
   const rec = await DB.get('meta', 'migration');
   const have = rec ? rec.value : 0;
-  if (have >= 3) return;
+  if (have >= 4) return;
 
   if (have < 1) {
     /* 22.09. (dritte Runde): Namen/Block-Codes/Sätze auf den damaligen Stand bringen, OHNE
@@ -166,16 +202,14 @@ async function ensureMigration() {
       if (renameEx[e.name]) { e.name = renameEx[e.name]; await DB.put('exercises', e); }
     }
 
+    /* Nur Pläne aus der Zeit vor den Profilen (ohne profileId) -- die heutigen Pläne heißen
+       wieder "Tag A/B" und dürfen z.B. nach einem Backup-Import (setzt meta.migration
+       zurück) nicht erneut umbenannt werden. Die Item-Angleichung von damals entfällt: die
+       betroffenen Pläne baut Stufe 4 ohnehin komplett neu auf. */
     const renamePlan = { 'Tag A': 'Trainingseinheit 1', 'Tag B': 'Trainingseinheit 2' };
     for (const p of S.plans) {
-      if (renamePlan[p.name]) p.name = renamePlan[p.name];
-      const seedPlan = SEED_PLANS.find((sp) => sp[1] === p.name);
-      const seedRows = seedPlan ? seedPlan[2] : [];
-      p.items.forEach((it) => {
-        const row = seedRows.find((r) => r[1] === exName(it.exerciseId));
-        if (!row) return;
-        it.block = row[0]; it.targetSets = row[2]; it.targetReps = row[3]; it.hint = row[4];
-      });
+      if (p.profileId || !renamePlan[p.name]) continue;
+      p.name = renamePlan[p.name];
       await DB.put('plans', p);
     }
   }
@@ -204,7 +238,39 @@ async function ensureMigration() {
     }
   }
 
-  await DB.put('meta', { key: 'migration', value: 3 });
+  if (have < 4) {
+    /* 28.09.: Sarahs neuer Plan mit Phase 1/2. Ihre beiden Pläne werden an Ort und Stelle
+       umgebaut (gleiche planId), damit der Verlauf der Übungen, die im selben Plan bleiben,
+       weiterläuft. Alle Pläne heißen jetzt "Tag A/B" mit Untertitel. Trainingsdaten
+       (workouts) werden nicht angefasst. */
+    const renameEx = { 'Face Pulls': 'Face Pull (Kabel)', 'Woodchopper': 'Woodchopper (Kabel)' };
+    for (const e of S.exercises) {
+      const to = renameEx[e.name];
+      if (to && !exByName(to)) { e.name = to; await DB.put('exercises', e); }
+    }
+    const renamePlan = {
+      Sarah: { 'Trainingseinheit 1': 'Tag A', 'Trainingseinheit 2': 'Tag B' },
+      Alex: { 'Kraft und Sehne': 'Tag A', 'Power': 'Tag B' },
+    };
+    for (const prof of S.profiles) {
+      const map = renamePlan[prof.name];
+      if (!map) continue;
+      for (const p of plansOfProfile(prof.id)) {
+        const seed = map[p.name] && SEED_PLANS.find((sp) => sp[0] === prof.name && sp[1] === map[p.name]);
+        if (!seed) continue;
+        p.name = seed[1];
+        p.subtitle = seed[2];
+        if (prof.name === 'Sarah') {
+          for (const row of seed[3]) await ensureExercise(row[1]);
+          p.items = seed[3].map(seedItem).filter((it) => it.exerciseId);
+        }
+        await DB.put('plans', p);
+      }
+      if (prof.name === 'Sarah' && !prof.phase) { prof.phase = 1; await DB.put('profiles', prof); }
+    }
+  }
+
+  await DB.put('meta', { key: 'migration', value: 4 });
 }
 
 /* Demodaten sind seit dem produktiven Einsatz abgeschaltet (Nutzerwunsch 23.09.) -
@@ -285,9 +351,7 @@ function viewMain() {
   const plan = myPlans.find((p) => p.id === S.day);
   ensureDraft(plan.id);
 
-  let h = '<div class="daybar">' + myPlans.map((p) =>
-    '<button class="dayseg' + (p.id === S.day ? ' on' : '') + '" data-action="day" data-id="' + p.id + '">' +
-    esc(p.name) + '</button>').join('') + '</div>';
+  let h = dayBtns(myPlans, S.day, 'day');
 
   const today = todayISO();
   const curDate = curDateFor(plan.id);
@@ -304,9 +368,11 @@ function viewMain() {
   }
 
   h += '<div class="daymeta"><div class="daymeta-row">' +
+    (hasPhases(S.profile) ? '<button type="button" class="phase-chip" data-action="phase-pick">Phase ' + curPhase() +
+      '<svg viewBox="0 0 24 24"><path d="M7 10l5 5 5-5"/></svg></button>' : '') +
     '<input type="date" class="date-in" data-in="cur-date" data-plan="' + plan.id + '" value="' + curDate + '" max="' + today + '">' +
     '<select class="hist-pick" data-in="hist-pick" data-plan="' + plan.id + '">' +
-    '<option value="">Vergangene Einheit…</option>' +
+    '<option value="">Frühere Einheit…</option>' +
     planWorkouts.map((w) => '<option value="' + w.date + '"' + (w.date === curDate ? ' selected' : '') + '>' +
       esc(fmtShort(w.date) + (w.demo ? ' · Demo' : '')) + '</option>').join('') +
     '</select></div><div class="daymeta-txt">' + esc(meta) +
@@ -323,7 +389,7 @@ function viewMain() {
     else last.items.push(it);
   });
   groups.forEach((grp) => {
-    const sets = grp.items[0] && grp.items[0].targetSets;
+    const sets = setsRange(grp.items.map((it) => specOf(it).targetSets));
     h += '<div class="blk-card"><div class="blk-h"><span class="t">' + esc(grpLabel(grp.key)) + '</span>' +
       (sets ? '<span class="n">· ' + esc(sets) + ' Sätze</span>' : '') + '</div>';
     grp.items.forEach((it, i) => { if (i) h += '<div class="ex-div"></div>'; h += planRow(plan, it); });
@@ -333,16 +399,20 @@ function viewMain() {
   return h;
 }
 
+/* Baut den Draft bei Datumswechsel neu auf; bei gleichem Datum werden nur Übungen ergänzt,
+   die im Draft noch fehlen (z.B. nach einer Planänderung per Update), eingetippte Werte
+   der übrigen bleiben erhalten. */
 function ensureDraft(planId) {
   const date = curDateFor(planId);
   const cur = S.draft[planId];
-  if (cur && cur._date === date) return;
-
   const plan = S.plans.find((p) => p.id === planId);
+  const sameDate = cur && cur._date === date;
+  if (sameDate && plan.items.every((it) => unitOf(it.exerciseId) === 'x' || cur[it.exerciseId])) return;
+
   const existingW = S.workouts.find((w) => w.planId === planId && w.date === date);
-  const d = { _date: date };
+  const d = sameDate ? cur : { _date: date };
   plan.items.forEach((it) => {
-    if (unitOf(it.exerciseId) === 'x') return;
+    if (unitOf(it.exerciseId) === 'x' || d[it.exerciseId]) return;
     const e = existingW && entryIn(existingW, it.exerciseId);
     if (e) {
       d[it.exerciseId] = { weight: e.weight > 0 ? fmtKg(e.weight) : '', done: !!e.done };
@@ -363,18 +433,24 @@ function planRow(plan, it) {
   const d = tracked ? S.draft[plan.id][exId] : null;
   const prev = tracked ? lastLog(exId, plan.id, curDateFor(plan.id)) : null;
   const up = tracked && prev && prev.done && prev.weight > 0;
+  const spec = specOf(it);
 
+  /* Chevron + Info-Knopf hängen am letzten Wort des Namens (nowrap), damit sie bei einem
+     Zeilenumbruch nie allein in der zweiten Zeile stehen. */
+  const name = exName(exId), cut = name.lastIndexOf(' ') + 1;
   let h = '<div class="nm"' + (tracked ? ' data-action="toggle-hist" data-id="' + exId + '"' : '') + '>' +
-    '<b>' + esc(exName(exId)) +
-    (tracked ? '<span class="chev-ico' + (isOpen ? ' on' : '') + '">›</span>' : '') + '</b>' +
-    (it.hint ? '<span>' + esc(it.hint) + '</span>' : '') +
+    '<b>' + esc(name.slice(0, cut)) + '<span class="nw">' + esc(name.slice(cut)) +
+    (tracked ? '<span class="chev-ico' + (isOpen ? ' on' : '') + '">›</span>' : '') +
+    (tipsFor(exId) ? '<button type="button" class="info-btn" data-action="tips" data-id="' + exId + '" aria-label="Ausführung">' +
+      '<svg viewBox="0 0 24 24"><circle cx="12" cy="7.2" r="1.7"/><path d="M12 11.2v6.3"/></svg></button>' : '') + '</span></b>' +
+    (spec.hint ? '<span>' + esc(spec.hint) + '</span>' : '') +
     '</div>';
 
   if (!tracked) {
-    h += '<div class="bc"></div><div class="reps-plain">' + esc(it.targetReps || '') + '</div>';
+    h += '<div class="bc"></div><div class="reps-plain">' + esc(spec.targetReps || '') + '</div>';
   } else {
     const cid = 'chk-' + plan.id + '-' + exId;
-    const prefix = unit === 'kg' && it.targetReps ? esc(it.targetReps) + ' ×' : '';
+    const prefix = unit === 'kg' && spec.targetReps ? esc(spec.targetReps) + ' ×' : '';
     h += '<div class="bc">' + (up ? '<span class="up-badge">↑</span>' : '') + '</div>' +
       '<div class="fp">' +
       '<input type="checkbox" class="vh" id="' + cid + '" data-in="done" data-plan="' + plan.id + '" data-id="' + exId + '"' +
@@ -445,8 +521,9 @@ async function saveWorkout() {
   const w = {
     id: existing ? existing.id : uid(),
     date, startedAt: existing ? existing.startedAt : Date.now(), finishedAt: Date.now(),
-    planId: plan.id, planName: plan.name, entries,
+    planId: plan.id, planName: planLabel(plan), entries,
   };
+  if (hasPhases(plan.profileId)) w.phase = curPhase();
   await DB.put('workouts', w);
   S.workouts = existing ? S.workouts.map((x) => (x.id === w.id ? w : x)) : [w, ...S.workouts];
   S.workouts.sort(byDateDesc);
@@ -471,7 +548,7 @@ function openMenu() {
   h += '<div class="sec-title">Pläne</div>';
   plansOfProfile(S.profile).forEach((p) => {
     h += '<div class="item" data-action="plan-edit" data-id="' + p.id + '">' +
-      '<div class="grow"><strong class="ellip">' + esc(p.name) + '</strong>' +
+      '<div class="grow"><strong class="ellip">' + esc(planLabel(p)) + '</strong>' +
       '<span class="mut sm">' + p.items.length + ' Übungen</span></div><span class="chev">›</span></div>';
   });
   h += '<div class="sec-title">Daten</div>' +
@@ -480,6 +557,41 @@ function openMenu() {
   if (hasDemo) h += '<button class="btn full ghost" style="margin-top:8px" data-action="demo-del">Demodaten löschen</button>';
   h += '<button class="btn full ghost danger" style="margin-top:8px" data-action="wipe">Alle Daten löschen</button>';
   openModal(h);
+}
+
+/* ---------------- Phase & Ausführungs-Tipps ---------------- */
+function openPhasePicker() {
+  const prof = profileOf(S.profile);
+  const ph = curPhase();
+  const opt = (n, txt) => '<button class="ph-opt' + (ph === n ? ' on' : '') + '" data-action="phase-set" data-id="' + n + '">' +
+    'Phase ' + n + '<small>' + txt + '</small></button>';
+  openModal('<div class="modal-h"><h2>Trainingsphase<span class="modal-sub">gilt für alle Pläne von ' + esc(prof.name) + '</span></h2>' +
+    '<button class="icon-btn" data-action="modal-close">✕</button></div>' +
+    opt(1, 'Sätze, Wiederholungen und Hinweise laut Phase 1') +
+    opt(2, 'Sätze, Wiederholungen und Hinweise laut Phase 2') +
+    '<div class="mut sm" style="margin:6px 4px 0">Übungen, Gewichte und Verlauf bleiben beim Wechsel unverändert.</div>');
+}
+
+async function setPhase(n) {
+  const prof = profileOf(S.profile);
+  closeModal();
+  if (!prof || curPhase() === n) return;
+  prof.phase = n;
+  await DB.put('profiles', prof);
+  render();
+  toast('Phase ' + n + ' aktiv', 1800);
+}
+
+function openTips(exId) {
+  const tips = tipsFor(exId);
+  if (!tips) return;
+  const ph = hasPhases(S.profile) ? curPhase() : 0;
+  openModal('<div class="modal-h"><h2>' + esc(exName(exId)) +
+    '<span class="modal-sub">Ausführung' + (ph ? ' · Phase ' + ph : '') + '</span></h2>' +
+    '<button class="icon-btn" data-action="modal-close">✕</button></div>' +
+    '<ul class="tips">' + tips.map((t) =>
+      '<li' + (t.ph && ph && t.ph !== ph ? ' class="dim"' : '') + '>' +
+      (t.ph ? '<span class="ptag">Phase ' + t.ph + '</span>' : '') + esc(t.t) + '</li>').join('') + '</ul>');
 }
 
 async function demoDel() {
@@ -515,9 +627,7 @@ function viewHistory() {
   if (!S.histPlan || !myPlans.some((p) => p.id === S.histPlan)) S.histPlan = S.day || myPlans[0].id;
   const plan = myPlans.find((p) => p.id === S.histPlan);
 
-  let h = '<div class="daybar">' + myPlans.map((p) =>
-    '<button class="dayseg' + (p.id === S.histPlan ? ' on' : '') + '" data-action="hist-plan" data-id="' + p.id + '">' +
-    esc(p.name) + '</button>').join('') + '</div>';
+  let h = dayBtns(myPlans, S.histPlan, 'hist-plan');
 
   h += '<div class="filter-row">' + HIST_FILTERS.map(([v, label]) =>
     '<button class="fchip' + (S.histFilter === v ? ' on' : '') + '" data-action="hist-filter" data-id="' + v + '">' +
@@ -537,7 +647,7 @@ function viewHistory() {
       : '<div class="empty" style="padding:22px 4px">Keine Einträge im gewählten Zeitraum.</div>';
     h += '</div>';
   });
-  if (!any) h += '<div class="empty">Noch keine Trainingsdaten für „' + esc(plan.name) + '".</div>';
+  if (!any) h += '<div class="empty">Noch keine Trainingsdaten für „' + esc(planLabel(plan)) + '“.</div>';
 
   return h;
 }
@@ -548,7 +658,8 @@ function openWorkoutDetail(id) {
   const done = (w.entries || []).filter((e) => e.done).length;
   let h = '<div class="modal-h"><h2 class="ellip">' + esc(w.planName || 'Training') + '</h2>' +
     '<button class="icon-btn" data-action="modal-close">✕</button></div>' +
-    '<div class="mut" style="margin-bottom:12px">' + fmtDate(w.date) + ' · ' + done + ' von ' + (w.entries || []).length + ' geschafft' +
+    '<div class="mut" style="margin-bottom:12px">' + fmtDate(w.date) + (w.phase ? ' · Phase ' + w.phase : '') +
+    ' · ' + done + ' von ' + (w.entries || []).length + ' geschafft' +
     (w.demo ? ' · Demo' : '') + '</div>' +
     '<table class="ptab"><tr><th>Block</th><th>Übung</th><th class="num">Gewicht</th><th class="num"></th></tr>';
   (w.entries || []).forEach((e) => {
@@ -576,10 +687,17 @@ function viewPlanEdit() {
   if (!p) return '<div class="empty">Plan nicht gefunden.</div>';
   let h = '<label class="fld"><span>Name des Plans</span>' +
     '<input type="text" data-in="p-name" value="' + esc(p.name) + '"></label>' +
+    '<label class="fld"><span>Untertitel</span>' +
+    '<input type="text" data-in="p-sub" value="' + esc(p.subtitle || '') + '" placeholder="z.B. Kraft/Power"></label>' +
     '<div class="sec-title">Übungen</div>';
+  if (hasPhases(S.profile)) {
+    h += '<div class="mut sm" style="margin:-2px 4px 10px">Sätze, Wdh. und Hinweis gelten für <b>Phase ' + curPhase() +
+      '</b>. Die andere Phase bearbeitest du, nachdem du auf der Hauptseite die Phase gewechselt hast.</div>';
+  }
   if (!p.items.length) h += '<div class="empty">Noch keine Übung im Plan.</div>';
 
-  p.items.forEach((it, i) => {
+  p.items.forEach((item, i) => {
+    const it = { exerciseId: item.exerciseId, block: item.block, ...pick(specOf(item)) };
     h += '<div class="card tight" style="margin-bottom:8px">' +
       '<div class="row" style="margin-bottom:8px"><strong class="grow ellip">' + esc(exName(it.exerciseId)) + '</strong>' +
       '<button class="xbtn" data-action="pi-up" data-i="' + i + '">▲</button>' +
@@ -598,14 +716,20 @@ function viewPlanEdit() {
   return h;
 }
 
+/* Sätze/Wdh./Hinweis einer Phase, getrimmt. */
+const pick = (sp) => ({
+  targetSets: String(sp.targetSets || '').trim(), targetReps: String(sp.targetReps || '').trim(), hint: (sp.hint || '').trim(),
+});
+
 async function savePlan() {
   const p = S.editPlan;
   p.name = (p.name || '').trim() || p.name;
-  p.items = p.items.map((it) => ({
-    exerciseId: it.exerciseId, block: (it.block || '').trim(),
-    targetSets: String(it.targetSets || '').trim(), targetReps: String(it.targetReps || '').trim(),
-    hint: (it.hint || '').trim(),
-  }));
+  p.subtitle = (p.subtitle || '').trim();
+  p.items = p.items.map((it) => {
+    const out = { exerciseId: it.exerciseId, block: (it.block || '').trim(), ...pick(it) };
+    if (it.p2) out.p2 = pick(it.p2);
+    return out;
+  });
   await DB.put('plans', p);
   S.plans = S.plans.map((x) => (x.id === p.id ? p : x));
   sortPlans();
@@ -807,6 +931,9 @@ function onClick(ev) {
     case 'sw-reset': swReset(); break;
 
     case 'day': S.day = id; S.openKey = null; render(); break;
+    case 'phase-pick': openPhasePicker(); break;
+    case 'phase-set': setPhase(+id); break;
+    case 'tips': openTips(id); break;
     case 'toggle-hist': { const key = S.day + '|' + id; S.openKey = S.openKey === key ? null : key; render(); break; }
     case 'save-workout': saveWorkout(); break;
     case 'today': delete S.dates[id]; S.openKey = null; render(); break;
@@ -845,10 +972,11 @@ function onInput(ev) {
   if (!S.editPlan) return;
   const i = +el.dataset.i;
   if (k === 'p-name') S.editPlan.name = el.value;
+  else if (k === 'p-sub') S.editPlan.subtitle = el.value;
   else if (k === 'pi-block') S.editPlan.items[i].block = el.value;
-  else if (k === 'pi-sets') S.editPlan.items[i].targetSets = el.value;
-  else if (k === 'pi-reps') S.editPlan.items[i].targetReps = el.value;
-  else if (k === 'pi-hint') S.editPlan.items[i].hint = el.value;
+  else if (k === 'pi-sets') specOf(S.editPlan.items[i]).targetSets = el.value;
+  else if (k === 'pi-reps') specOf(S.editPlan.items[i]).targetReps = el.value;
+  else if (k === 'pi-hint') specOf(S.editPlan.items[i]).hint = el.value;
 }
 
 function onChange(ev) {

@@ -19,8 +19,9 @@ Schrittweite vor.
 - Im Topbar ein Icon **Profil wechseln** (⇄, neben Stoppuhr und Menü) — Profile
   (**Sarah** / **Alex**) gruppieren komplett eigene Sätze von Trainingsplänen, jedes
   Profil hat seinen eigenen Tagesumschalter darunter. Merkt sich das zuletzt gewählte
-  Profil über Neustarts hinweg. Sarah trainiert „Trainingseinheit 1/2", Alex
-  „Kraft und Sehne" / „Power".
+  Profil über Neustarts hinweg. Beide trainieren „Tag A" / „Tag B", der Untertitel
+  steht klein darunter (Sarah: Kraft/Power, Hypertrophie/Prävention; Alex: Kraft und
+  Sehne, Power).
 - Darunter ein Umschalter zwischen den Plänen des aktuellen Profils.
   Direkt darunter ein **editierbares Datum** (heute vorausgewählt, springt beim
   Verlassen der Hauptseite wieder auf heute) plus ein Dropdown mit vergangenen
@@ -28,14 +29,21 @@ Schrittweite vor.
   gewählt, zeigt die Seite genau diese Einheit zum **rückwirkenden Bearbeiten**: Felder
   füllen sich mit den damals gespeicherten Werten, „Einheit speichern" überschreibt sie.
   Ein „heute"-Link führt zurück.
+- **Phase 1 / Phase 2** (nur Sarah): Links neben dem Datum zeigt ein Chip die aktive
+  Phase, Tippen öffnet die Auswahl. Die Übungen bleiben gleich, nur Sätze,
+  Wiederholungen und Hinweise wechseln. Gewichte und Verlauf laufen über den
+  Phasenwechsel hinweg in einer Kurve weiter, jede gespeicherte Einheit merkt sich
+  ihre Phase.
 - Darunter je Block (A/B/C) eine eigene Karte mit ihren Übungen, Sätze stehen einmal
-  in der Block-Überschrift („Block A · 3 Sätze"). Pro Übung: Name (+ Hinweistext),
+  in der Block-Überschrift („Block A · 3 Sätze", bei unterschiedlichen Sätzen als Spanne „2–3 Sätze"). Pro Übung: Name (+ Hinweistext),
   daneben eine Pille mit Wiederholungen × Gewicht (nur die Zahl ist editierbar) und
   ein Pfeil-Haken direkt in der Pille — antippen markiert „nächstes Mal steigern",
   füllt sich grün. Der zweite, gedämpfte Pfeil links davon (falls vorhanden) zeigt,
   dass letztes Mal schon alles geschafft war.
 - Tippen auf eine Übungszeile (erkennbar am **›**) klappt ihre Historie auf: letzte
   Einheiten als scrollbare Tabelle plus Fortschrittskurve (reine Linie, ohne Punkte).
+  Der kleine **i-Knopf** hinter dem Namen (bei Sarahs Übungen) öffnet stattdessen die
+  Ausführungs-Tipps; Tipps, die nur für die andere Phase gelten, stehen blass darunter.
   Die Kurve ist nach **Trainingsindex** gezeichnet, nicht nach Kalenderdatum — ein
   ausgelassenes oder zusätzliches Training verzerrt den Verlauf dadurch nicht.
 - Unten ein Knopf **„Einheit speichern"** — übernimmt alle angezeigten Gewichte für das
@@ -125,4 +133,4 @@ Keine Build-Schritte, keine Abhängigkeiten — Dateien ändern, neu laden, fert
 Der Service Worker liefert die gecachte Version sofort aus und lädt die neue im
 Hintergrund (stale-while-revalidate): Nach einem Deploy ist die Änderung beim
 übernächsten Start aktiv. Soll sie sofort greifen, in `sw.js` die Zeile
-`const CACHE = 'gymlog-v11'` (aktueller Stand) hochzählen.
+`const CACHE = 'gymlog-v12'` (aktueller Stand) hochzählen.
