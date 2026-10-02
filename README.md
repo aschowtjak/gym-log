@@ -29,7 +29,7 @@ Schrittweite vor.
   gewählt, zeigt die Seite genau diese Einheit zum **rückwirkenden Bearbeiten**: Felder
   füllen sich mit den damals gespeicherten Werten, „Einheit speichern" überschreibt sie.
   Ein „heute"-Link führt zurück.
-- **Phase 1 / Phase 2** (nur Sarah): Links neben dem Datum zeigt ein Chip die aktive
+- **Phase 1 / Phase 2** (Sarah und Alex, je Profil getrennt): Links neben dem Datum zeigt ein Chip die aktive
   Phase, Tippen öffnet die Auswahl. Die Übungen bleiben gleich, nur Sätze,
   Wiederholungen und Hinweise wechseln. Gewichte und Verlauf laufen über den
   Phasenwechsel hinweg in einer Kurve weiter, jede gespeicherte Einheit merkt sich

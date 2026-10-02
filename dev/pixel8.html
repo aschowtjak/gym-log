@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pixel 8 Vorschau</title>
+<style>
+  /* Entwickler-Hilfe, nicht Teil der App (steht nicht im Service-Worker-Cache).
+     Pixel 8: 1080 × 2400 px bei DPR 2,625 = 412 × 915 CSS-Pixel (Chrome-Viewport).
+     Die App läuft im iframe und teilt sich IndexedDB mit http://localhost:8099/. */
+  :root { --bg: #e9ebef; --fg: #333; --frame: #111; }
+  @media (prefers-color-scheme: dark) { :root { --bg: #1b1d22; --fg: #ccc; --frame: #000; } }
+  body { margin: 0; background: var(--bg); color: var(--fg); font: 13px system-ui, sans-serif;
+    display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 16px; }
+  .bar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; justify-content: center; }
+  button { font: inherit; padding: 4px 10px; border-radius: 6px; border: 1px solid #888; background: transparent; color: inherit; cursor: pointer; }
+  .phone { border: 12px solid var(--frame); border-radius: 36px; overflow: hidden; background: #000;
+    transform-origin: top center; }
+  iframe { display: block; width: 412px; height: 915px; border: 0; }
+</style>
+</head>
+<body>
+  <div class="bar">
+    <b>Pixel 8 · 412 × 915</b>
+    <button id="rot">Drehen</button>
+    <button id="fit">An Fenster anpassen: an</button>
+    <button id="reload">Neu laden</button>
+  </div>
+  <div class="phone" id="phone"><iframe id="app" src="../index.html"></iframe></div>
+<script>
+  const W = 412, H = 915, frame = 24;
+  let land = false, fit = true;
+  const app = document.getElementById('app'), phone = document.getElementById('phone');
+  function layout() {
+    const w = land ? H : W, h = land ? W : H;
+    app.style.width = w + 'px'; app.style.height = h + 'px';
+    const s = fit ? Math.min(1, (innerHeight - 80) / (h + frame), (innerWidth - 32) / (w + frame)) : 1;
+    phone.style.transform = 'scale(' + s + ')';
+    phone.style.marginBottom = (s - 1) * (h + frame) + 'px';
+  }
+  document.getElementById('rot').onclick = () => { land = !land; layout(); };
+  document.getElementById('fit').onclick = (e) => { fit = !fit; e.target.textContent = 'An Fenster anpassen: ' + (fit ? 'an' : 'aus'); layout(); };
+  document.getElementById('reload').onclick = () => app.contentWindow.location.reload();
+  /* Desktop-Scrollleisten kosten Breite, die das Handy nicht hat (Overlay-Scrollbars). */
+  function noScrollbar() {
+    const d = app.contentDocument;
+    if (!d || !d.head || d.getElementById('px8-nosb')) return;
+    const st = d.createElement('style');
+    st.id = 'px8-nosb';
+    st.textContent = 'html{scrollbar-width:none}::-webkit-scrollbar{display:none}';
+    d.head.appendChild(st);
+  }
+  app.addEventListener('load', noScrollbar);
+  noScrollbar();
+  addEventListener('resize', layout);
+  layout();
+</script>
+</body>
+</html>

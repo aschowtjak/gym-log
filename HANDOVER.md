@@ -142,7 +142,7 @@ letztere beide nur über das Zahnrad-Menü erreichbar. Kein Tabbar.
   setzt `S.day`/`S.histPlan` auf den ersten Plan des neuen Profils zurück und zeigt kurz
   einen Toast mit dem Profilnamen. `init()` liest `meta.profile` und verwendet die ID nur,
   wenn sie zu einem noch existierenden Profil gehört. `#profBadge` (blau, `--acc2`) zeigt
-  die ersten zwei Buchstaben des aktiven Profils, wird in `render()` aktualisiert (liegt
+  den ersten Buchstaben des aktiven Profils (seit 02.10., vorher zwei), wird in `render()` aktualisiert (liegt
   außerhalb von `#app`, deshalb keine Neuerzeugung bei jedem Rendern nötig). Button selbst
   versteckt sich, falls `S.profiles.length < 2`.
 - **Tagesumschalter** (`.daybar`) darunter: ein Button pro Plan **des aktuell gewählten
@@ -749,3 +749,33 @@ Umgesetzt (beides per Rückfrage bestätigt):
   weniger Innenabstand — Pille 179→162px, mehr Platz für Namen.
 - `sw.js` → `gymlog-v13`. Merge-Freigabe: `.claude/settings.local.json` erlaubt
   `Bash(gh pr merge *)` (gitignored, nur lokal).
+
+## 11. Siebte Runde (02.10.): Alex' neuer Plan mit Phase 1/2
+
+- **Neuer Plan für Alex** (Tag A „Kraft und Sehne“, Tag B „Power“) in `SEED_PLANS`, **ohne
+  Hinweistexte** (Nutzerwunsch). Nur die Beinpresse hat Phase-2-Werte (Tag A 3×12→8 / 3×6–8,
+  Tag B 3×6–8 / 3×4–5), dadurch bekommt Alex automatisch den Phasen-Chip (`hasPhases`).
+- **Gewichte bleiben erhalten:** Verlauf hängt an planId + exerciseId. Migration Stufe 5 baut
+  Alex' Pläne an Ort und Stelle um (gleiche planIds) und **benennt Übungen um statt neue
+  anzulegen** (kurze Namen, Nutzerwunsch): Bulgarian Split Squat mit Kurzhanteln → „Bulgarian
+  Split Squat“, Einbeiniges Wadenheben → „Wadenheben einbeinig“, Schrägbank 15–30° →
+  „Schrägbankdrücken“, Kabelrudern → „Rudern am Kabel“, Bizepscurls (KH) → „Bizepscurls“,
+  Trizepsdrücken (Kabel) → „Trizepsdrücken“. Setzt `Alex.phase = 1`.
+- **Austausch:** Tag A C2 Trizepsdrücken statt Kabel-Außenrotation; Tag B A2 „Jump Squats“
+  (neu, kg) statt Box Jump; Block B Tag B = Schrägbankdrücken → Pallof Press →
+  Kabel-Außenrotation (3×12–15, dieselbe Übung wie bei Sarah); „Sprung mit Kurzhanteln oder
+  Trap Bar“ fällt raus (bleibt im Katalog, Verlauf in den Workouts).
+- **Hyperextensions mit Gewicht** (unit `x` → `kg`) — gilt für Sarah und Alex (geteilte Übung).
+- Big 3: 6 Sätze × 10 s (Block A zeigt daher „3–6 Sätze“).
+- **Profil-Badge** im Topbar zeigt nur noch einen Buchstaben („A“/„S“), `min-width` für runde Form.
+- **Prüfen immer in Pixel-8-Auflösung: 412 × 915 CSS-Pixel** (1080×2400 bei DPR 2,625).
+  Im Browser-Pane per `resize_window 412×915`; für den Nutzer gibt es `dev/pixel8.html`
+  (App im iframe, Drehen, Skalieren, Desktop-Scrollleiste ausgeblendet, damit die volle
+  Breite wie am Handy ankommt). Aufruf: `http://localhost:8099/dev/pixel8.html`.
+- **Pillen kartenübergreifend bündig:** `.blk-card` hat `grid-template-columns: 1fr auto
+  minmax(167px,auto)`. Vorher war die Pillenspalte `auto` und jede Karte richtete sich nach
+  ihrer längsten Wdh.-Angabe → Pillen um bis zu 18px versetzt. 167px = „12 → 8 ×“ (breiteste).
+- `SEED_VERSION` 7, `sw.js` → `gymlog-v14`.
+- Getestet (412×915): alter Stand mit Alex-Einheiten → Migration: gleiche planIds, alle
+  Gewichte der verbliebenen Übungen als „letztes Mal“ vorhanden, keine doppelten
+  Übungsnamen; Sarahs Hyperextensions mit Gewichtsfeld; Badge „A“/„S“; keine Konsolenfehler.

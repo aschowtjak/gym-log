@@ -22,14 +22,14 @@ const SEED_EXERCISES = [
   ['Ruderzug', 'Rücken', 'kg'],
   ['Side Plank', 'Rumpf', 's'],
   ['Abduktoren-Maschine', 'Beine', 'kg'],
-  ['Hyperextensions', 'Rücken', 'x'],
+  ['Hyperextensions', 'Rücken', 'kg'],
 
   // --- weiterer Katalog, falls du Übungen austauschst ---
   ['Bankdrücken (LH)', 'Brust', 'kg'], ['Schrägbankdrücken (KH)', 'Brust', 'kg'],
   ['Bankdrücken (KH)', 'Brust', 'kg'], ['Butterfly', 'Brust', 'kg'],
   ['Dips', 'Brust', 'x'], ['Liegestütze', 'Brust', 'x'],
   ['Klimmzüge', 'Rücken', 'x'], ['Langhantelrudern', 'Rücken', 'kg'],
-  ['Kurzhantelrudern', 'Rücken', 'kg'], ['Kabelrudern', 'Rücken', 'kg'],
+  ['Kurzhantelrudern', 'Rücken', 'kg'], ['Rudern am Kabel', 'Rücken', 'kg'],
   ['Kreuzheben', 'Rücken', 'kg'], ['Rückenstrecker', 'Rücken', 'x'],
   ['Kniebeugen', 'Beine', 'kg'], ['Beinpresse', 'Beine', 'kg'],
   ['Beinstrecker', 'Beine', 'kg'], ['Beinbeuger', 'Beine', 'kg'],
@@ -37,20 +37,21 @@ const SEED_EXERCISES = [
   ['Wadenheben', 'Beine', 'kg'], ['Adduktoren-Maschine', 'Beine', 'kg'],
   ['Schulterdrücken (KH)', 'Schultern', 'kg'], ['Seitheben', 'Schultern', 'kg'],
   ['Frontheben', 'Schultern', 'kg'], ['Reverse Butterfly', 'Schultern', 'kg'],
-  ['Bizepscurls (KH)', 'Arme', 'kg'], ['Bizepscurls (LH)', 'Arme', 'kg'],
-  ['Hammercurls', 'Arme', 'kg'], ['Trizepsdrücken (Kabel)', 'Arme', 'kg'],
+  ['Bizepscurls', 'Arme', 'kg'], ['Bizepscurls (LH)', 'Arme', 'kg'],
+  ['Hammercurls', 'Arme', 'kg'], ['Trizepsdrücken', 'Arme', 'kg'],
   ['Stirndrücken', 'Arme', 'kg'],
   ['Plank', 'Rumpf', 's'], ['Crunches', 'Rumpf', 'x'],
   ['Beinheben', 'Rumpf', 'x'], ['Bauchpresse (Maschine)', 'Rumpf', 'kg'],
 
   // --- Übungen aus Alex' Plan ("Kraft und Sehne" / "Power") ---
   ['Bankdrücken flach', 'Brust', 'kg'], ['Big 3 im Wechsel', 'Rumpf', 's'],
-  ['Bulgarian Split Squat mit Kurzhanteln', 'Beine', 'kg'],
+  ['Bulgarian Split Squat', 'Beine', 'kg'],
   ['Latzug am Kabel', 'Rücken', 'kg'], ['Beinbeuger sitzend', 'Beine', 'kg'],
-  ['Hip Thrust', 'Beine', 'kg'], ['Einbeiniges Wadenheben', 'Beine', 'kg'],
+  ['Hip Thrust', 'Beine', 'kg'], ['Wadenheben einbeinig', 'Beine', 'kg'],
   ['Sprung mit Kurzhanteln oder Trap Bar', 'Beine', 'kg'],
-  ['Schrägbank 15–30°', 'Brust', 'kg'], ['Pallof Press', 'Rumpf', 'kg'],
+  ['Schrägbankdrücken', 'Brust', 'kg'], ['Pallof Press', 'Rumpf', 'kg'],
   ['Box Jump / Jump & Reach', 'Beine', 'x'], ['Y-Raises', 'Schultern', 'kg'],
+  ['Jump Squats', 'Beine', 'kg'],
 ];
 
 /* Profile gruppieren Trainingspläne (z.B. verschiedene Personen). Der Nutzer wechselt
@@ -85,26 +86,26 @@ const SEED_PLANS = [
     ['C3', 'Wadenheben (Beinpresse)', '2', '12–15', '', '3', '10–15', ''],
   ]],
   ['Alex', 'Tag A', 'Kraft und Sehne', [
-    ['A1', 'Beinpresse', '3', '15', '3 s runter, 3 s hoch; Becken darf sich nicht einrollen'],
-    ['A2', 'Bankdrücken flach', '3', '6–8', '2 Wdh. vor dem Versagen aufhören, Griff etwas enger'],
-    ['A3', 'Big 3 im Wechsel', '3', '10 s', 'Wechsel aus drei Übungen, 1 Übung pro Satz'],
-    ['B1', 'Bulgarian Split Squat mit Kurzhanteln', '3', '15', '3 s runter, 3 s hoch'],
+    ['A1', 'Beinpresse', '3', '12 → 8', '', '3', '6–8', ''],
+    ['A2', 'Bankdrücken flach', '3', '6–8', ''],
+    ['A3', 'Big 3 im Wechsel', '6', '10 s', ''],
+    ['B1', 'Bulgarian Split Squat', '3', '8–10', ''],
     ['B2', 'Latzug am Kabel', '3', '8–10', ''],
     ['B3', 'Beinbeuger sitzend', '3', '10–12', ''],
-    ['C1', 'Hip Thrust', '3', '8–10', 'Langhantel oder Maschine'],
-    ['C2', 'Kabel-Außenrotation', '3', '12–15', 'Oberarm am Körper, Handtuch unter dem Ellbogen'],
-    ['C3', 'Einbeiniges Wadenheben', '3', '10–15', 'abwechselnd mit gestrecktem und gebeugtem Knie'],
+    ['C1', 'Hip Thrust', '3', '8–10', ''],
+    ['C2', 'Trizepsdrücken', '3', '10–12', ''],
+    ['C3', 'Wadenheben einbeinig', '3', '10–15', ''],
   ]],
   ['Alex', 'Tag B', 'Power', [
-    ['A1', 'Beinpresse', '3', '6–8', 'Kontrastpaar mit Box Jump (danach 60–90 s Pause)'],
-    ['A2', 'Box Jump / Jump & Reach', '3', '3', 'Kontrastpaar nach Beinpresse; Sprung maximal hoch'],
-    ['A3', 'Kabelrudern', '3', '8–10', 'neu in Block 1'],
-    ['B1', 'Sprung mit Kurzhanteln oder Trap Bar', '3', '3', 'leichtes Gewicht, maximale Höhe, vor jeder Wdh. neu ansetzen'],
-    ['B2', 'Schrägbank 15–30°', '3', '8–10', 'beim ersten Mal auf Schulterschmerz testen'],
-    ['B3', 'Pallof Press', '3', '10', 'neu in Block 2'],
-    ['C1', 'Hyperextensions', '3', '10–12', 'Rücken neutral, Bewegung nur aus der Hüfte'],
-    ['C2', 'Bizepscurls (KH)', '3', '10–12', ''],
-    ['C3', 'Y-Raises', '3', '12', '1–3 kg, mit der Brust auf der Schrägbank'],
+    ['A1', 'Beinpresse', '3', '6–8', '', '3', '4–5', ''],
+    ['A2', 'Jump Squats', '3', '3', ''],
+    ['A3', 'Rudern am Kabel', '3', '8–10', ''],
+    ['B1', 'Schrägbankdrücken', '3', '8–10', ''],
+    ['B2', 'Pallof Press', '3', '10', ''],
+    ['B3', 'Kabel-Außenrotation', '3', '12–15', ''],
+    ['C1', 'Hyperextensions', '3', '10–12', ''],
+    ['C2', 'Bizepscurls', '3', '10–12', ''],
+    ['C3', 'Y-Raises', '3', '12', ''],
   ]],
 ];
 
@@ -188,4 +189,4 @@ const TIPS = {
 };
 
 /* Wird hochgezählt, wenn neue Startdaten nachgeliefert werden sollen. */
-const SEED_VERSION = 6;
+const SEED_VERSION = 7;

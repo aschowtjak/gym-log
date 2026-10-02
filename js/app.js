@@ -47,7 +47,7 @@ const planLabel = (p) => p.name + (p.subtitle ? ' · ' + p.subtitle : '');
 
 /* Phasen: Ein Plan-Item kann neben seinen Grundwerten (= Phase 1) ein `p2` mit eigenen
    Sätzen/Wdh./Hinweis tragen. Die aktive Phase gilt pro Profil (`profile.phase`); Profile
-   ganz ohne `p2`-Items (z.B. Alex) kennen keine Phasen und sehen auch keinen Phasen-Chip.
+   ganz ohne `p2`-Items kennen keine Phasen und sehen auch keinen Phasen-Chip.
    Übung, Gewicht und Verlauf sind von der Phase unabhängig -- eine Kurve pro Übung. */
 const hasPhases = (profileId) => plansOfProfile(profileId).some((p) => p.items.some((it) => it.p2));
 const curPhase = () => { const p = profileOf(S.profile); return p && p.phase === 2 && hasPhases(S.profile) ? 2 : 1; };
@@ -193,7 +193,7 @@ async function ensureExercise(name) {
 async function ensureMigration() {
   const rec = await DB.get('meta', 'migration');
   const have = rec ? rec.value : 0;
-  if (have >= 4) return;
+  if (have >= 5) return;
 
   if (have < 1) {
     /* 22.09. (dritte Runde): Namen/Block-Codes/Sätze auf den damaligen Stand bringen, OHNE
@@ -273,7 +273,41 @@ async function ensureMigration() {
     }
   }
 
-  await DB.put('meta', { key: 'migration', value: 4 });
+  if (have < 5) {
+    /* 02.10.: Alex' neuer Plan, jetzt ebenfalls mit Phase 1/2 (nur die Beinpresse wechselt
+       Wdh.), ohne Hinweistexte. Übungen werden umbenannt statt neu angelegt, damit Gewichte
+       und Verlauf (planId + exerciseId) weiterlaufen; die Pläne werden an Ort und Stelle neu
+       aufgebaut. Herausgefallene Übungen (Box Jump, Sprung mit Kurzhanteln) bleiben im
+       Katalog, ihr Verlauf in den Workouts. Hyperextensions (Sarah und Alex) jetzt mit Gewicht. */
+    const renameEx = {
+      'Bulgarian Split Squat mit Kurzhanteln': 'Bulgarian Split Squat',
+      'Einbeiniges Wadenheben': 'Wadenheben einbeinig',
+      'Schrägbank 15–30°': 'Schrägbankdrücken',
+      'Kabelrudern': 'Rudern am Kabel',
+      'Bizepscurls (KH)': 'Bizepscurls',
+      'Trizepsdrücken (Kabel)': 'Trizepsdrücken',
+    };
+    for (const e of S.exercises) {
+      const to = renameEx[e.name];
+      if (to && !exByName(to)) { e.name = to; await DB.put('exercises', e); }
+    }
+    const hyper = exByName('Hyperextensions');
+    if (hyper && hyper.unit !== 'kg') { hyper.unit = 'kg'; await DB.put('exercises', hyper); }
+    const alex = S.profiles.find((p) => p.name === 'Alex');
+    if (alex) {
+      for (const p of plansOfProfile(alex.id)) {
+        const seed = SEED_PLANS.find((sp) => sp[0] === 'Alex' && sp[1] === p.name);
+        if (!seed) continue;
+        for (const row of seed[3]) await ensureExercise(row[1]);
+        p.subtitle = seed[2];
+        p.items = seed[3].map(seedItem).filter((it) => it.exerciseId);
+        await DB.put('plans', p);
+      }
+      if (!alex.phase) { alex.phase = 1; await DB.put('profiles', alex); }
+    }
+  }
+
+  await DB.put('meta', { key: 'migration', value: 5 });
 }
 
 /* Demodaten sind seit dem produktiven Einsatz abgeschaltet (Nutzerwunsch 23.09.) -
@@ -340,7 +374,7 @@ function render() {
   $('.prof-btn').classList.toggle('hidden', S.profiles.length < 2);
   const prof = S.profiles.find((p) => p.id === S.profile);
   const profBadge = $('#profBadge');
-  if (prof) { profBadge.textContent = prof.name.slice(0, 2).toUpperCase(); profBadge.classList.remove('hidden'); }
+  if (prof) { profBadge.textContent = prof.name.slice(0, 1).toUpperCase(); profBadge.classList.remove('hidden'); }
   else profBadge.classList.add('hidden');
 
   $('#app').innerHTML = v === 'planEdit' ? viewPlanEdit() : v === 'history' ? viewHistory() : viewMain();
